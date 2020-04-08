@@ -1,6 +1,8 @@
 package requests
 
 import (
+	"encoding/json"
+	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -233,19 +235,65 @@ func (wf *Workflow) SetBodyAuto(params ...interface{}) *Workflow {
 		default:
 			var values url.Values
 			switch param := params[0].(type) {
+
+			case string:
+				parambytes := []byte(param)
+			TOPSTRING:
+				for _, c := range parambytes {
+					switch c {
+					case ' ':
+						continue
+					case '[', '{':
+						if json.Valid(parambytes) {
+							wf.Body.SetPrefix(TypeJSON)
+							wf.Body.SetIOBody(parambytes)
+						} else {
+							log.Println("SetBodyAuto -- Param is not json, but like json.")
+						}
+						break TOPSTRING
+					default:
+						break TOPSTRING
+					}
+				}
+				wf.Body.SetIOBody(parambytes)
+			case []byte:
+
+			TOPBYTES:
+				for _, c := range param {
+					switch c {
+					case ' ':
+						continue
+					case '[', '{':
+						if json.Valid(param) {
+							wf.Body.SetPrefix(TypeJSON)
+							wf.Body.SetIOBody(param)
+						} else {
+							log.Println("SetBodyAuto -- Param is not json, but like json.")
+						}
+						break TOPBYTES
+					default:
+						break TOPBYTES
+					}
+				}
+				wf.Body.SetIOBody(param)
+			case map[string]interface{}, []string, []interface{}:
+				paramjson, err := json.Marshal(param)
+				if err != nil {
+					log.Panic(err)
+				}
+				wf.Body.SetPrefix(TypeJSON)
+				wf.Body.SetIOBody(paramjson)
+
 			case map[string]string:
 				values := make(url.Values)
 				for k, v := range param {
 					values.Set(k, v)
 				}
 				wf.Body.SetIOBody([]byte(values.Encode()))
+
 			case map[string][]string:
 				values = param
 				wf.Body.SetIOBody([]byte(values.Encode()))
-			case string:
-				wf.Body.SetIOBody([]byte(param))
-			case []byte:
-				wf.Body.SetIOBody(param)
 
 			case *UploadFile:
 				params = append(params, TypeFormData)
