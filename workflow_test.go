@@ -304,3 +304,82 @@ func TestWorkflow_Body(t *testing.T) {
 	// wf.SetBody(body)
 	// resp, _ = wf.Execute()
 }
+
+func TestWorkflow_BodyAutoJsonMap(t *testing.T) {
+	ses := NewSession()
+	wf := ses.Post("http://httpbin.org/post")
+	wf.SetBodyAuto(map[string]interface{}{"a": 1, "b": map[string]int{"c": 1}})
+	resp, err := wf.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+
+	result := gjson.Get(resp.Content(), "json.b.c").Int()
+	if result != 1 {
+		t.Error(resp.Content())
+	}
+}
+
+func TestWorkflow_BodyAutoJsonList(t *testing.T) {
+	ses := NewSession()
+	wf := ses.Post("http://httpbin.org/post")
+	wf.SetBodyAuto([]interface{}{"a", map[string]interface{}{"b": map[string]int{"c": 1}}})
+	resp, err := wf.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+
+	result := gjson.Get(resp.Content(), "json.1.b.c").Int()
+	if result != 1 {
+		t.Error(resp.Content())
+	}
+
+	// wf = ses.Post("http://httpbin.org/post") workflow 每次执行完都会清除设置.
+	wf.SetBodyAuto([]string{"a", "b"})
+	resp, err = wf.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+
+	result2 := gjson.Get(resp.Content(), "json.0").String()
+	if result2 != "a" {
+		t.Error(resp.Content())
+	}
+}
+
+func TestWorkflow_BodyAutoRawJson(t *testing.T) {
+	ses := NewSession()
+	wf := ses.Post("http://httpbin.org/post")
+	wf.SetBodyAuto(`{"a": 1}`)
+	resp, err := wf.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+
+	result := gjson.Get(resp.Content(), "json.a").Int()
+	if result != 1 {
+		t.Error(resp.Content())
+	}
+
+	wf.SetBodyAuto(`{"a": {"b": "123"}}`)
+	resp, err = wf.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+
+	resultstr := gjson.Get(resp.Content(), "json.a.b").String()
+	if resultstr != "123" {
+		t.Error(resp.Content())
+	}
+
+	wf.SetBodyAuto(`{"a": {"b": '123"}}`)
+	resp, err = wf.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+
+	resultstr = gjson.Get(resp.Content(), "json.a.b").String()
+	if resultstr == "123" {
+		t.Error(resp.Content())
+	}
+}
