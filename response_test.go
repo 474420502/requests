@@ -20,27 +20,27 @@ func TestFromHTTPResponse(t *testing.T) {
 		t.Error(err)
 	}
 
-	if gjson.Get(resp.Content(), "headers.Host").String() != "httpbin.org" {
+	if gjson.Get(resp.ContentString(), "headers.Host").String() != "httpbin.org" {
 		t.Error("headers.Host != httpbin.org ?")
 	}
 
-	if resp.GetSrcResponse().StatusCode != 200 {
+	if resp.GetStatusCode() != 200 {
 		t.Error("StatusCode != 200")
 	}
 
-	if len(resp.GetSrcResponse().Header) == 0 {
-		t.Error("esp.GetSrcResponse().Header == nil")
+	if len(resp.GetHeader()) == 0 {
+		t.Error("esp.GetResponse().Header == nil")
 	}
 
-	if resp.GetStatue() != "200 OK" || resp.GetStatueCode() != 200 {
-		t.Error(" resp.GetStatue() != 200 OK")
+	if resp.GetStatus() != "200 OK" || resp.GetStatusCode() != 200 {
+		t.Error(" resp.GetStatus() != 200 OK")
 	}
 
 	if len(resp.GetHeader()["Content-Length"]) != 1 {
 		t.Error("resp.GetHeader() is error ?")
 	}
 
-	if int64(len(resp.Content())) != resp.GetContentLength() {
+	if int64(len(resp.ContentString())) != resp.GetContentLength() {
 		t.Error("content len is not equal")
 	}
 }
@@ -53,7 +53,7 @@ func TestResponseDeflate(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		} else {
-			if gjson.Get(resp.Content(), "headers.Accept-Encoding").String() != "deflate" {
+			if gjson.Get(string(resp.Content()), "headers.Accept-Encoding").String() != "deflate" {
 				t.Error("Accept-Encoding != deflate ?")
 			}
 		}

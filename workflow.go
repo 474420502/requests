@@ -365,7 +365,7 @@ func setTempCookieRequest(req *http.Request, wf *Workflow) {
 }
 
 // Execute 执行
-func (wf *Workflow) Execute() (*Response, error) {
+func (wf *Workflow) Execute() (IResponse, error) {
 
 	req := buildBodyRequest(wf)
 
