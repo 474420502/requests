@@ -198,7 +198,7 @@ func NewSession() *Session {
 	}
 
 	client.Jar = cjar
-	return &Session{client: client, body: NewBody(), transport: transport, auth: nil, cookiejar: client.Jar, Header: make(http.Header), Is: IsSetting{false}}
+	return &Session{client: client, body: NewBody(), transport: transport, auth: nil, cookiejar: client.Jar, Header: make(http.Header), Is: IsSetting{true}}
 }
 
 // SetConfig 设置配置
