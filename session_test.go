@@ -45,8 +45,8 @@ func TestSession_Get(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			if len(resp.Content()) <= 150 {
-				t.Error(resp.Content())
+			if len(string(resp.Content())) <= 150 {
+				t.Error(string(resp.Content()))
 			}
 		})
 	}
@@ -83,7 +83,7 @@ func TestSession_Post(t *testing.T) {
 				return
 			}
 
-			if tt.want.MatchString(got.Content()) == false {
+			if tt.want.MatchString(string(got.Content())) == false {
 				t.Errorf("Metchod = %v, want %v", got, tt.want)
 			}
 
@@ -133,7 +133,7 @@ func TestSession_Setparams(t *testing.T) {
 				return
 			}
 
-			if tt.want.MatchString(got.Content()) == false {
+			if tt.want.MatchString(string(got.Content())) == false {
 				t.Errorf("Metchod = %v, want %v", got, tt.want)
 			}
 		})
@@ -176,7 +176,7 @@ func TestSession_PostUploadFile(t *testing.T) {
 				return
 			}
 
-			if tt.want.MatchString(got.Content()) == false {
+			if tt.want.MatchString(string(got.Content())) == false {
 				t.Errorf("Metchod = %v, want %v", got, tt.want)
 			}
 
@@ -220,7 +220,7 @@ func TestSession_Put(t *testing.T) {
 				return
 			}
 
-			if tt.want.MatchString(got.Content()) == false {
+			if tt.want.MatchString(string(got.Content())) == false {
 				t.Errorf("Metchod = %v, want %v", got, tt.want)
 			}
 
@@ -264,7 +264,7 @@ func TestSession_Patch(t *testing.T) {
 				return
 			}
 
-			if tt.want.MatchString(got.Content()) == false {
+			if tt.want.MatchString(string(got.Content())) == false {
 				t.Errorf("Metchod = %v, want %v", got, tt.want)
 			}
 
@@ -330,8 +330,8 @@ func TestSession_SetConfigInsecure(t *testing.T) {
 		if err != nil {
 			t.Error("Unable to make request", err)
 		}
-		if resp.readResponse.StatusCode != 200 {
-			t.Error("Request did not return OK, is ", resp.readResponse.StatusCode)
+		if resp.GetStatusCode() != 200 {
+			t.Error("Request did not return OK, is ", resp.GetStatusCode())
 		}
 	}
 
@@ -346,8 +346,8 @@ func TestSession_Cookies(t *testing.T) {
 			t.Error("cookies set error", err)
 		}
 
-		if !regexp.MustCompile(`"a": "1"`).MatchString(resp.Content()) {
-			t.Error(resp.Content())
+		if !regexp.MustCompile(`"a": "1"`).MatchString(string(resp.Content())) {
+			t.Error(string(resp.Content()))
 		}
 	})
 }
@@ -364,8 +364,8 @@ func TestSession_Header(t *testing.T) {
 			t.Error("cookies set error", err)
 		}
 
-		if len(resp.Content()) <= 5000 {
-			t.Error(resp.Content(), len(resp.Content()))
+		if len(string(resp.Content())) <= 5000 {
+			t.Error(string(resp.Content()), len(string(resp.Content())))
 		}
 
 		ses = NewSession()
@@ -374,8 +374,8 @@ func TestSession_Header(t *testing.T) {
 			t.Error("cookies set error", err)
 		}
 
-		if len(resp.Content()) <= 5000 {
-			t.Error(resp.Content(), len(resp.Content()))
+		if len(string(resp.Content())) <= 5000 {
+			t.Error(string(resp.Content()), len(string(resp.Content())))
 		}
 	})
 }
@@ -418,11 +418,11 @@ func TestSession_ConfigEx(t *testing.T) {
 			t.Error(err)
 		}
 
-		if gjson.Get(resp.Content(), "headers.Cookie").String() != "Request=Cookiejar; eson=bad" {
-			t.Error(resp.Content())
+		if gjson.Get(string(resp.Content()), "headers.Cookie").String() != "Request=Cookiejar; eson=bad" {
+			t.Error(string(resp.Content()))
 		}
 
-		if resp.GetSrcResponse().Header["Connection"][0] != "keep-alive" {
+		if resp.GetHeader()["Connection"][0] != "keep-alive" {
 			t.Error("CKeepAlive is error")
 		}
 	}
@@ -454,8 +454,8 @@ func TestSession_ConfigEx(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if gjson.Get(resp.Content(), "cookies").String() != "{}" {
-		t.Error(resp.Content())
+	if gjson.Get(string(resp.Content()), "cookies").String() != "{}" {
+		t.Error(string(resp.Content()))
 	}
 }
 
@@ -466,10 +466,10 @@ func TestSession_SetQuery(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	query := gjson.Get(resp.Content(), "args.query").Array()
+	query := gjson.Get(string(resp.Content()), "args.query").Array()
 	for _, q := range query {
 		if !(q.String() == "a" || q.String() == "b") {
-			t.Error("query error, ", resp.Content())
+			t.Error("query error, ", string(resp.Content()))
 		}
 	}
 }
@@ -486,8 +486,8 @@ func TestSession_SetHeader(t *testing.T) {
 		t.Error(err)
 	}
 
-	if gjson.Get(resp.Content(), "headers.Xx-Xx").String() != "Header" {
-		t.Error("Xx-Xx is not exists", resp.Content())
+	if gjson.Get(string(resp.Content()), "headers.Xx-Xx").String() != "Header" {
+		t.Error("Xx-Xx is not exists", string(resp.Content()))
 	}
 
 	if ses.GetHeader()["xx-xx"][0] != "Header" {
@@ -502,8 +502,8 @@ func TestSession_SetBasicAuth(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if resp.GetSrcResponse().StatusCode != 200 {
-		t.Error("code != 200, code = ", resp.GetStatue())
+	if resp.GetStatusCode() != 200 {
+		t.Error("code != 200, code = ", resp.GetStatus())
 	}
 
 	ses.SetConfig(CBasicAuth, BasicAuth{User: "eson", Password: "12345"})
@@ -512,8 +512,8 @@ func TestSession_SetBasicAuth(t *testing.T) {
 		t.Error(err)
 	}
 
-	if resp.GetSrcResponse().StatusCode != 401 {
-		t.Error("code != 401, code = ", resp.GetStatue())
+	if resp.GetStatusCode() != 401 {
+		t.Error("code != 401, code = ", resp.GetStatus())
 	}
 
 	resp, err = ses.Get("http://httpbin.org/basic-auth/eson/123456").Execute()
@@ -521,8 +521,8 @@ func TestSession_SetBasicAuth(t *testing.T) {
 		t.Error(err)
 	}
 
-	if resp.GetSrcResponse().StatusCode != 401 {
-		t.Error("code != 401, code = ", resp.GetStatue())
+	if resp.GetStatusCode() != 401 {
+		t.Error("code != 401, code = ", resp.GetStatus())
 	}
 
 	ses.SetConfig(CBasicAuth, []string{"son", "123456"})
@@ -530,8 +530,8 @@ func TestSession_SetBasicAuth(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if resp.GetSrcResponse().StatusCode != 401 {
-		t.Error("code != 401, code = ", resp.GetStatue())
+	if resp.GetStatusCode() != 401 {
+		t.Error("code != 401, code = ", resp.GetStatus())
 	}
 
 	ses.SetConfig(CBasicAuth, nil)
@@ -539,7 +539,7 @@ func TestSession_SetBasicAuth(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if resp.GetSrcResponse().StatusCode != 401 {
-		t.Error("code != 401, code = ", resp.GetStatue())
+	if resp.GetStatusCode() != 401 {
+		t.Error("code != 401, code = ", resp.GetStatus())
 	}
 }

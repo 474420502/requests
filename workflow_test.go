@@ -19,8 +19,8 @@ func TestWorkflow(t *testing.T) {
 			t.Error("cookies set error", err)
 		}
 
-		if !regexp.MustCompile(`"a": "1"`).MatchString(resp.Content()) {
-			t.Error(resp.Content())
+		if !regexp.MustCompile(`"a": "1"`).MatchString(string(resp.Content())) {
+			t.Error(string(resp.Content()))
 		}
 
 		wf := ses.Get("http://httpbin.org/cookies/set")
@@ -29,24 +29,24 @@ func TestWorkflow(t *testing.T) {
 			t.Error("cookies set error", err)
 		}
 
-		result := gjson.Get(resp.Content(), "cookies.a")
+		result := gjson.Get(string(resp.Content()), "cookies.a")
 		if result.Exists() {
-			t.Error(resp.Content())
+			t.Error(string(resp.Content()))
 		}
 
-		result = gjson.Get(resp.Content(), "cookies.b")
+		result = gjson.Get(string(resp.Content()), "cookies.b")
 		if result.Int() != 2 {
-			t.Error(resp.Content())
+			t.Error(string(resp.Content()))
 		}
 
 		resp, err = wf.AddKVCookie("a", "3").Execute()
-		results := gjson.GetMany(resp.Content(), "cookies.a", "cookies.b")
+		results := gjson.GetMany(string(resp.Content()), "cookies.a", "cookies.b")
 		if results[0].Int() != 3 {
-			t.Error(resp.Content())
+			t.Error(string(resp.Content()))
 		}
 
 		if results[1].Int() != 2 {
-			t.Error(resp.Content())
+			t.Error(string(resp.Content()))
 		}
 
 		resp, err = wf.AddHeader("XX", "123").SetRawURL("http://httpbin.org/headers").Execute()
@@ -55,9 +55,9 @@ func TestWorkflow(t *testing.T) {
 		}
 
 		// headers 只能是String 表示
-		result = gjson.Get(resp.Content(), "headers.Xx")
+		result = gjson.Get(string(resp.Content()), "headers.Xx")
 		if result.String() != "123" {
-			t.Error(resp.Content())
+			t.Error(string(resp.Content()))
 		}
 	})
 
@@ -73,12 +73,12 @@ func TestWorkflow_SetHeader(t *testing.T) {
 	wf.SetHeader(header)
 
 	resp, err := wf.Execute()
-	if err == nil && gjson.Get(resp.Content(), "headers.Eson").String() != "Bad" {
-		t.Error("wf header error", resp.Content())
+	if err == nil && gjson.Get(string(resp.Content()), "headers.Eson").String() != "Bad" {
+		t.Error("wf header error", string(resp.Content()))
 	}
 
-	if err == nil && gjson.Get(resp.Content(), "headers.Haha").String() != "xixi" {
-		t.Error("wf header error", resp.Content())
+	if err == nil && gjson.Get(string(resp.Content()), "headers.Haha").String() != "xixi" {
+		t.Error("wf header error", string(resp.Content()))
 	}
 
 	// 输入不符合规范不 会自动转换
@@ -96,12 +96,12 @@ func TestWorkflow_SetHeader(t *testing.T) {
 	wf.AddHeader("Hello", "Hehe")
 
 	resp, err = wf.Execute()
-	if err != nil || gjson.Get(resp.Content(), "headers.Eson").String() != "Bad" {
-		t.Error("wf header error", resp.Content())
+	if err != nil || gjson.Get(string(resp.Content()), "headers.Eson").String() != "Bad" {
+		t.Error("wf header error", string(resp.Content()))
 	}
 
-	if err != nil || gjson.Get(resp.Content(), "headers.Hello").String() != "Hehe" {
-		t.Error("wf header error", resp.Content())
+	if err != nil || gjson.Get(string(resp.Content()), "headers.Hello").String() != "Hehe" {
+		t.Error("wf header error", string(resp.Content()))
 	}
 
 	if len(wf.GetHeader()) != 1 || wf.GetHeader()["Hello"][0] != "Hehe" {
@@ -115,10 +115,10 @@ func TestWorkflow_SetHeader(t *testing.T) {
 
 	resp, err = wf.DelHeader("Hello").Execute()
 	if err != nil {
-		t.Error(err, resp.Content())
+		t.Error(err, string(resp.Content()))
 	}
 
-	if gjson.Get(resp.Content(), "headers.Hello").Exists() {
+	if gjson.Get(string(resp.Content()), "headers.Hello").Exists() {
 		t.Error(" wf.DelHeader error")
 	}
 }
@@ -134,44 +134,44 @@ func TestWorkflow_Cookies(t *testing.T) {
 	wf.AddCookie(&http.Cookie{Name: "eson", Value: "Bad"})
 
 	resp, _ := wf.Execute()
-	if gjson.Get(resp.Content(), "cookies.Request").String() != "Cookiejar" {
+	if gjson.Get(string(resp.Content()), "cookies.Request").String() != "Cookiejar" {
 		t.Error(" wf.AddCookie error")
 	}
 
-	if gjson.Get(resp.Content(), "cookies.eson").String() != "Bad" {
+	if gjson.Get(string(resp.Content()), "cookies.eson").String() != "Bad" {
 		t.Error(" wf.AddCookie error")
 	}
 
 	wf.DelCookie("eson")
 	resp, _ = wf.Execute()
-	if gjson.Get(resp.Content(), "cookies.Request").String() != "Cookiejar" {
+	if gjson.Get(string(resp.Content()), "cookies.Request").String() != "Cookiejar" {
 		t.Error(" wf.AddCookie error")
 	}
-	if gjson.Get(resp.Content(), "cookies.eson").Exists() {
+	if gjson.Get(string(resp.Content()), "cookies.eson").Exists() {
 		t.Error(" wf.DelCookie error")
 	}
 
 	wf.AddCookies([]*http.Cookie{&http.Cookie{Name: "A", Value: "AA"}, &http.Cookie{Name: "B", Value: "BB"}})
 
 	resp, _ = wf.Execute()
-	if gjson.Get(resp.Content(), "cookies.Request").String() != "Cookiejar" {
+	if gjson.Get(string(resp.Content()), "cookies.Request").String() != "Cookiejar" {
 		t.Error(" wf.AddCookie error")
 	}
-	if gjson.Get(resp.Content(), "cookies.A").String() != "AA" {
+	if gjson.Get(string(resp.Content()), "cookies.A").String() != "AA" {
 		t.Error(" wf.AddCookies error")
 	}
 
-	if gjson.Get(resp.Content(), "cookies.B").String() != "BB" {
+	if gjson.Get(string(resp.Content()), "cookies.B").String() != "BB" {
 		t.Error(" wf.AddCookies error")
 	}
 
 	wf.DelCookie(&http.Cookie{Name: "A", Value: "AA"})
 	resp, _ = wf.Execute()
-	if gjson.Get(resp.Content(), "cookies.A").Exists() {
+	if gjson.Get(string(resp.Content()), "cookies.A").Exists() {
 		t.Error(" wf.AddCookies error")
 	}
 
-	if gjson.Get(resp.Content(), "cookies.B").String() != "BB" {
+	if gjson.Get(string(resp.Content()), "cookies.B").String() != "BB" {
 		t.Error(" wf.AddCookies error")
 	}
 }
@@ -185,28 +185,28 @@ func TestWorkflow_URL(t *testing.T) {
 	}
 	wf.SetParsedURL(u)
 	resp, _ := wf.Execute()
-	if gjson.Get(resp.Content(), "url").String() != "http://httpbin.org/get" {
-		t.Error("SetParsedURL ", resp.Content())
+	if gjson.Get(string(resp.Content()), "url").String() != "http://httpbin.org/get" {
+		t.Error("SetParsedURL ", string(resp.Content()))
 	}
 
 	if wf.GetParsedURL().String() != "http://httpbin.org/get" {
-		t.Error("SetParsedURL ", resp.Content())
+		t.Error("SetParsedURL ", string(resp.Content()))
 	}
 
 	wf = ses.Get("http://httpbin.org/")
 
 	resp, _ = wf.SetURLRawPath("/get").Execute()
-	if gjson.Get(resp.Content(), "url").String() != "http://httpbin.org/get" {
-		t.Error("SetParsedURL ", resp.Content())
+	if gjson.Get(string(resp.Content()), "url").String() != "http://httpbin.org/get" {
+		t.Error("SetParsedURL ", string(resp.Content()))
 	}
 
 	if wf.GetURLRawPath() != "/get" {
-		t.Error("SetParsedURL ", resp.Content())
+		t.Error("SetParsedURL ", string(resp.Content()))
 	}
 
 	resp, _ = wf.SetURLRawPath("anything/user/password").Execute()
-	if gjson.Get(resp.Content(), "url").String() != "http://httpbin.org/anything/user/password" {
-		t.Error("SetParsedURL ", resp.Content())
+	if gjson.Get(string(resp.Content()), "url").String() != "http://httpbin.org/anything/user/password" {
+		t.Error("SetParsedURL ", string(resp.Content()))
 	}
 	paths := wf.GetURLPath()
 	if paths[0] != "/anything" || paths[1] != "/user" || paths[2] != "/password" {
@@ -215,8 +215,8 @@ func TestWorkflow_URL(t *testing.T) {
 
 	wf = ses.Get("http://httpbin.org/")
 	wf.SetURLPath(paths)
-	if gjson.Get(resp.Content(), "url").String() != "http://httpbin.org/anything/user/password" {
-		t.Error("SetParsedURL ", resp.Content())
+	if gjson.Get(string(resp.Content()), "url").String() != "http://httpbin.org/anything/user/password" {
+		t.Error("SetParsedURL ", string(resp.Content()))
 	}
 }
 
@@ -231,7 +231,7 @@ func TestWorkflow_Query(t *testing.T) {
 	wf.SetQuery(wfquery)
 
 	resp, _ := wf.Execute()
-	result := gjson.Get(resp.Content(), "args.workflow")
+	result := gjson.Get(string(resp.Content()), "args.workflow")
 
 	for _, r := range result.Array() {
 		if !(r.String() == "to" || r.String() == "do") {
@@ -239,7 +239,7 @@ func TestWorkflow_Query(t *testing.T) {
 		}
 	}
 
-	if gjson.Get(resp.Content(), "args.session").String() != "true" {
+	if gjson.Get(string(resp.Content()), "args.session").String() != "true" {
 		t.Error("session SetQuery error")
 	}
 
@@ -269,7 +269,7 @@ func TestWorkflow_Body(t *testing.T) {
 	body.SetIOBody("a=1&b=2")
 	wf.SetBody(body)
 	resp, _ := wf.Execute()
-	form := gjson.Get(resp.Content(), "form").Map()
+	form := gjson.Get(string(resp.Content()), "form").Map()
 	if v, ok := form["a"]; ok {
 		if v.String() != "1" {
 			t.Error(v)
@@ -286,7 +286,7 @@ func TestWorkflow_Body(t *testing.T) {
 	body.SetIOBody(`{"a": "1",   "b":  "2"}`)
 	wf.SetBody(body)
 	resp, _ = wf.Execute()
-	json := gjson.Get(resp.Content(), "json").Map()
+	json := gjson.Get(string(resp.Content()), "json").Map()
 	if v, ok := json["a"]; ok {
 		if v.String() != "1" {
 			t.Error(v)
@@ -314,9 +314,9 @@ func TestWorkflow_BodyAutoJsonMap(t *testing.T) {
 		t.Error(err)
 	}
 
-	result := gjson.Get(resp.Content(), "json.b.c").Int()
+	result := gjson.Get(string(resp.Content()), "json.b.c").Int()
 	if result != 1 {
-		t.Error(resp.Content())
+		t.Error(string(resp.Content()))
 	}
 }
 
@@ -329,9 +329,9 @@ func TestWorkflow_BodyAutoJsonList(t *testing.T) {
 		t.Error(err)
 	}
 
-	result := gjson.Get(resp.Content(), "json.1.b.c").Int()
+	result := gjson.Get(string(resp.Content()), "json.1.b.c").Int()
 	if result != 1 {
-		t.Error(resp.Content())
+		t.Error(string(resp.Content()))
 	}
 
 	// wf = ses.Post("http://httpbin.org/post") workflow 每次执行完都会清除设置.
@@ -341,9 +341,9 @@ func TestWorkflow_BodyAutoJsonList(t *testing.T) {
 		t.Error(err)
 	}
 
-	result2 := gjson.Get(resp.Content(), "json.0").String()
+	result2 := gjson.Get(string(resp.Content()), "json.0").String()
 	if result2 != "a" {
-		t.Error(resp.Content())
+		t.Error(string(resp.Content()))
 	}
 }
 
@@ -356,9 +356,9 @@ func TestWorkflow_BodyAutoRawJson(t *testing.T) {
 		t.Error(err)
 	}
 
-	result := gjson.Get(resp.Content(), "json.a").Int()
+	result := gjson.Get(string(resp.Content()), "json.a").Int()
 	if result != 1 {
-		t.Error(resp.Content())
+		t.Error(string(resp.Content()))
 	}
 
 	wf.SetBodyAuto(`{"a": {"b": "123"}}`)
@@ -367,9 +367,9 @@ func TestWorkflow_BodyAutoRawJson(t *testing.T) {
 		t.Error(err)
 	}
 
-	resultstr := gjson.Get(resp.Content(), "json.a.b").String()
+	resultstr := gjson.Get(string(resp.Content()), "json.a.b").String()
 	if resultstr != "123" {
-		t.Error(resp.Content())
+		t.Error(string(resp.Content()))
 	}
 
 	wf.SetBodyAuto(`{"a": {"b": '123"}}`)
@@ -378,8 +378,41 @@ func TestWorkflow_BodyAutoRawJson(t *testing.T) {
 		t.Error(err)
 	}
 
-	resultstr = gjson.Get(resp.Content(), "json.a.b").String()
+	resultstr = gjson.Get(string(resp.Content()), "json.a.b").String()
 	if resultstr == "123" {
-		t.Error(resp.Content())
+		t.Error(string(resp.Content()))
+	}
+
+	wf.SetBodyAuto([]byte(`{"a": 1}`))
+	resp, err = wf.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+
+	result = gjson.Get(string(resp.Content()), "json.a").Int()
+	if result != 1 {
+		t.Error(string(resp.Content()))
+	}
+
+	wf.SetBodyAuto([]byte(`{"a": {"b": "123"}}`))
+	resp, err = wf.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+
+	resultstr = gjson.Get(string(resp.Content()), "json.a.b").String()
+	if resultstr != "123" {
+		t.Error(string(resp.Content()))
+	}
+
+	wf.SetBodyAuto([]byte(`{"a": {"b": '123"}}`))
+	resp, err = wf.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+
+	resultstr = gjson.Get(string(resp.Content()), "json.a.b").String()
+	if resultstr == "123" {
+		t.Error(string(resp.Content()))
 	}
 }

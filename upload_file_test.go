@@ -19,8 +19,8 @@ func TestUploadFile(t *testing.T) {
 		}
 		wf.SetBodyAuto(ufile, TypeFormData)
 		resp, _ := wf.Execute()
-		if _, ok := gjson.Get(resp.Content(), "files").Map()["file0"]; !ok {
-			t.Error("file error", resp.Content())
+		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file0"]; !ok {
+			t.Error("file error", string(resp.Content()))
 		}
 
 		ses = NewSession()
@@ -28,8 +28,8 @@ func TestUploadFile(t *testing.T) {
 
 		wf.SetBodyAuto("tests/json.file", TypeFormData)
 		resp, _ = wf.Execute()
-		if _, ok := gjson.Get(resp.Content(), "files").Map()["file0"]; !ok {
-			t.Error("file error", resp.Content())
+		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file0"]; !ok {
+			t.Error("file error", string(resp.Content()))
 		}
 
 		ses = NewSession()
@@ -40,8 +40,8 @@ func TestUploadFile(t *testing.T) {
 		ufile.SetFileReaderCloserFromFile("tests/json.file")
 		wf.SetBodyAuto(ufile)
 		resp, _ = wf.Execute()
-		if _, ok := gjson.Get(resp.Content(), "files").Map()["MyField"]; !ok {
-			t.Error("file error", resp.Content())
+		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["MyField"]; !ok {
+			t.Error("file error", string(resp.Content()))
 		}
 
 		// ses = NewSession()
@@ -50,8 +50,8 @@ func TestUploadFile(t *testing.T) {
 		ufile.SetFileReaderCloserFromFile("tests/json.file")
 		wf.SetBodyAuto(*ufile)
 		resp, _ = wf.Execute()
-		if _, ok := gjson.Get(resp.Content(), "files").Map()["MyField"]; !ok {
-			t.Error("file error", resp.Content())
+		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["MyField"]; !ok {
+			t.Error("file error", string(resp.Content()))
 		}
 
 		// ses = NewSession()
@@ -62,15 +62,15 @@ func TestUploadFile(t *testing.T) {
 		ufile.SetFileReaderCloserFromFile("tests/json.file")
 		wf.SetBodyAuto(ufile)
 		resp, _ = wf.Execute()
-		if _, ok := gjson.Get(resp.Content(), "files").Map()["file0"]; !ok {
-			t.Error("file error", resp.Content())
+		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file0"]; !ok {
+			t.Error("file error", string(resp.Content()))
 		}
 
 		ufile.SetFileReaderCloserFromFile("tests/json.file")
 		wf.SetBodyAuto(*ufile)
 		resp, _ = wf.Execute()
-		if _, ok := gjson.Get(resp.Content(), "files").Map()["file0"]; !ok {
-			t.Error("file error", resp.Content())
+		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file0"]; !ok {
+			t.Error("file error", string(resp.Content()))
 		}
 
 		var ufileList []*UploadFile
@@ -86,8 +86,8 @@ func TestUploadFile(t *testing.T) {
 		ufileList = append(ufileList, ufile)
 		wf.SetBodyAuto(ufileList)
 		resp, _ = wf.Execute()
-		if _, ok := gjson.Get(resp.Content(), "files").Map()["file1"]; !ok {
-			t.Error("file error", resp.Content())
+		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file1"]; !ok {
+			t.Error("file error", string(resp.Content()))
 		}
 
 		if wf.GetBody().ContentType() != "" {
@@ -96,11 +96,11 @@ func TestUploadFile(t *testing.T) {
 
 		wf.SetBodyAuto([]string{"tests/learn.js", "tests/json.file"}, TypeFormData)
 		resp, _ = wf.Execute()
-		if _, ok := gjson.Get(resp.Content(), "files").Map()["file1_0"]; !ok {
-			t.Error("file error", resp.Content())
+		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file1_0"]; !ok {
+			t.Error("file error", string(resp.Content()))
 		}
-		if _, ok := gjson.Get(resp.Content(), "files").Map()["file0_0"]; !ok {
-			t.Error("file error", resp.Content())
+		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file0_0"]; !ok {
+			t.Error("file error", string(resp.Content()))
 		}
 	}
 
