@@ -14,7 +14,7 @@ func TestWorkflow(t *testing.T) {
 	ses := NewSession()
 
 	t.Run("set cookie", func(t *testing.T) {
-		resp, err := ses.Get("http://httpbin.org/cookies/set").AddKVCookie("a", "1").Execute()
+		resp, err := ses.Get("http://httpbin.org/cookies/set").SetCookieKV("a", "1").Execute()
 		if err != nil {
 			t.Error("cookies set error", err)
 		}
@@ -24,7 +24,7 @@ func TestWorkflow(t *testing.T) {
 		}
 
 		wf := ses.Get("http://httpbin.org/cookies/set")
-		resp, err = wf.AddKVCookie("b", "2").Execute()
+		resp, err = wf.SetCookieKV("b", "2").Execute()
 		if err != nil {
 			t.Error("cookies set error", err)
 		}
@@ -39,7 +39,7 @@ func TestWorkflow(t *testing.T) {
 			t.Error(string(resp.Content()))
 		}
 
-		resp, err = wf.AddKVCookie("a", "3").Execute()
+		resp, err = wf.SetCookieKV("a", "3").Execute()
 		results := gjson.GetMany(string(resp.Content()), "cookies.a", "cookies.b")
 		if results[0].Int() != 3 {
 			t.Error(string(resp.Content()))
@@ -131,7 +131,7 @@ func TestWorkflow_Cookies(t *testing.T) {
 	}
 	ses.SetCookies(u, []*http.Cookie{&http.Cookie{Name: "Request", Value: "Cookiejar"}})
 	wf := ses.Get("http://httpbin.org/cookies")
-	wf.AddCookie(&http.Cookie{Name: "eson", Value: "Bad"})
+	wf.SetCookie(&http.Cookie{Name: "eson", Value: "Bad"})
 
 	resp, _ := wf.Execute()
 	if gjson.Get(string(resp.Content()), "cookies.Request").String() != "Cookiejar" {
