@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-// Workflow 工作流 设计点: 这个并不影响Session的属性变化 如 NewWorkflow(ses, url).AddHeader() 对ses没影响
-type Workflow struct {
+// Temporary 工作流 设计点: 这个并不影响Session的属性变化 如 NewWorkflow(ses, url).AddHeader() 对ses没影响
+type Temporary struct {
 	session   *Session
 	ParsedURL *url.URL
 	Method    string
@@ -19,9 +19,9 @@ type Workflow struct {
 	Cookies   map[string]*http.Cookie
 }
 
-// NewWorkflow new and init workflow
-func NewWorkflow(ses *Session, urlstr string) *Workflow {
-	wf := &Workflow{}
+// NewTemporary new and init workflow
+func NewTemporary(ses *Session, urlstr string) *Temporary {
+	wf := &Temporary{}
 	wf.SwitchSession(ses)
 	wf.SetRawURL(urlstr)
 
@@ -32,18 +32,18 @@ func NewWorkflow(ses *Session, urlstr string) *Workflow {
 }
 
 // SwitchSession 替换Session
-func (wf *Workflow) SwitchSession(ses *Session) {
+func (wf *Temporary) SwitchSession(ses *Session) {
 	wf.session = ses
 }
 
 // AddHeader 添加头信息  Get方法从Header参数上获取 必须符合规范 HaHa -> Haha 如果真要HaHa,只能这样 Ha-Ha
-func (wf *Workflow) AddHeader(key, value string) *Workflow {
+func (wf *Temporary) AddHeader(key, value string) *Temporary {
 	wf.Header[key] = append(wf.Header[key], value)
 	return wf
 }
 
 // SetHeader 设置完全替换原有Header 必须符合规范 HaHa -> Haha 如果真要HaHa,只能这样 Ha-Ha
-func (wf *Workflow) SetHeader(header http.Header) *Workflow {
+func (wf *Temporary) SetHeader(header http.Header) *Temporary {
 	wf.Header = make(http.Header)
 	for k, HValues := range header {
 		var newHValues []string
@@ -56,43 +56,43 @@ func (wf *Workflow) SetHeader(header http.Header) *Workflow {
 }
 
 // GetHeader 获取Workflow Header
-func (wf *Workflow) GetHeader() http.Header {
+func (wf *Temporary) GetHeader() http.Header {
 	return wf.Header
 }
 
 // GetCombineHeader 获取后的Header信息
-func (wf *Workflow) GetCombineHeader() http.Header {
+func (wf *Temporary) GetCombineHeader() http.Header {
 	return mergeMapList(wf.session.Header, wf.Header)
 }
 
 // DelHeader 添加头信息 Get方法从Header参数上获取
-func (wf *Workflow) DelHeader(key string) *Workflow {
+func (wf *Temporary) DelHeader(key string) *Temporary {
 	wf.Header.Del(key)
 	return wf
 }
 
-// AddCookie 添加Cookie
-func (wf *Workflow) AddCookie(c *http.Cookie) *Workflow {
+// SetCookie 添加Cookie
+func (wf *Temporary) SetCookie(c *http.Cookie) *Temporary {
 	wf.Cookies[c.Name] = c
 	return wf
 }
 
 // AddCookies 添加[]*http.Cookie
-func (wf *Workflow) AddCookies(cookies []*http.Cookie) *Workflow {
+func (wf *Temporary) AddCookies(cookies []*http.Cookie) *Temporary {
 	for _, c := range cookies {
-		wf.AddCookie(c)
+		wf.SetCookie(c)
 	}
 	return wf
 }
 
-// AddKVCookie 添加 以 key value 的 Cookie
-func (wf *Workflow) AddKVCookie(name, value string) *Workflow {
+// SetCookieKV 添加 以 key value 的 Cookie
+func (wf *Temporary) SetCookieKV(name, value string) *Temporary {
 	wf.Cookies[name] = &http.Cookie{Name: name, Value: value}
 	return wf
 }
 
 // DelCookie 删除Cookie
-func (wf *Workflow) DelCookie(name interface{}) *Workflow {
+func (wf *Temporary) DelCookie(name interface{}) *Temporary {
 	switch n := name.(type) {
 	case string:
 		if _, ok := wf.Cookies[n]; ok {
@@ -111,24 +111,24 @@ func (wf *Workflow) DelCookie(name interface{}) *Workflow {
 }
 
 // GetParsedURL 获取url的string形式
-func (wf *Workflow) GetParsedURL() *url.URL {
+func (wf *Temporary) GetParsedURL() *url.URL {
 	return wf.ParsedURL
 }
 
 // SetParsedURL 获取url的string形式
-func (wf *Workflow) SetParsedURL(u *url.URL) *Workflow {
+func (wf *Temporary) SetParsedURL(u *url.URL) *Temporary {
 	wf.ParsedURL = u
 	return wf
 }
 
 // GetRawURL 获取url的string形式
-func (wf *Workflow) GetRawURL() string {
+func (wf *Temporary) GetRawURL() string {
 	u := strings.Split(wf.ParsedURL.String(), "?")[0] + "?" + wf.GetCombineQuery().Encode()
 	return u
 }
 
 // SetRawURL 设置 url
-func (wf *Workflow) SetRawURL(srcURL string) *Workflow {
+func (wf *Temporary) SetRawURL(srcURL string) *Temporary {
 	purl, err := url.ParseRequestURI(srcURL)
 	if err != nil {
 		panic(err)
@@ -138,12 +138,12 @@ func (wf *Workflow) SetRawURL(srcURL string) *Workflow {
 }
 
 // GetQuery 获取Query参数
-func (wf *Workflow) GetQuery() url.Values {
+func (wf *Temporary) GetQuery() url.Values {
 	return wf.ParsedURL.Query()
 }
 
 // GetCombineQuery 获取Query参数
-func (wf *Workflow) GetCombineQuery() url.Values {
+func (wf *Temporary) GetCombineQuery() url.Values {
 	if wf.ParsedURL != nil {
 		vs := wf.ParsedURL.Query()
 		return mergeMapList(wf.session.GetQuery(), vs)
@@ -152,7 +152,7 @@ func (wf *Workflow) GetCombineQuery() url.Values {
 }
 
 // SetQuery 设置Query参数
-func (wf *Workflow) SetQuery(query url.Values) *Workflow {
+func (wf *Temporary) SetQuery(query url.Values) *Temporary {
 	if query == nil {
 		return wf
 	}
@@ -164,12 +164,12 @@ func (wf *Workflow) SetQuery(query url.Values) *Workflow {
 var regexGetPath = regexp.MustCompile("/[^/]*")
 
 // GetURLPath 获取Path参数 http://localhost/anything/user/pwd return [/anything /user /pwd]
-func (wf *Workflow) GetURLPath() []string {
+func (wf *Temporary) GetURLPath() []string {
 	return regexGetPath.FindAllString(wf.ParsedURL.Path, -1)
 }
 
 // GetURLRawPath 获取未分解Path参数
-func (wf *Workflow) GetURLRawPath() string {
+func (wf *Temporary) GetURLRawPath() string {
 	return wf.ParsedURL.Path
 }
 
@@ -186,7 +186,7 @@ func encodePath(path []string) string {
 }
 
 // SetURLPath 设置Path参数 对应 GetURLPath
-func (wf *Workflow) SetURLPath(path []string) *Workflow {
+func (wf *Temporary) SetURLPath(path []string) *Temporary {
 	if path == nil {
 		return wf
 	}
@@ -195,7 +195,7 @@ func (wf *Workflow) SetURLPath(path []string) *Workflow {
 }
 
 // SetURLRawPath 设置 参数 eg. /get = http:// hostname + /get
-func (wf *Workflow) SetURLRawPath(path string) *Workflow {
+func (wf *Temporary) SetURLRawPath(path string) *Temporary {
 	if path[0] != '/' {
 		wf.ParsedURL.Path = "/" + path
 	} else {
@@ -205,18 +205,18 @@ func (wf *Workflow) SetURLRawPath(path string) *Workflow {
 }
 
 // SetBody 参数设置
-func (wf *Workflow) SetBody(body IBody) *Workflow {
+func (wf *Temporary) SetBody(body IBody) *Temporary {
 	wf.Body = body
 	return wf
 }
 
 // GetBody 参数设置
-func (wf *Workflow) GetBody() IBody {
+func (wf *Temporary) GetBody() IBody {
 	return wf.Body
 }
 
 // SetBodyAuto 参数设置
-func (wf *Workflow) SetBodyAuto(params ...interface{}) *Workflow {
+func (wf *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 
 	if params != nil {
 		plen := len(params)
@@ -248,7 +248,7 @@ func (wf *Workflow) SetBodyAuto(params ...interface{}) *Workflow {
 							wf.Body.SetPrefix(TypeJSON)
 							wf.Body.SetIOBody(parambytes)
 						} else {
-							log.Println("SetBodyAuto -- Param is not json, but like json.")
+							log.Println("SetBodyAuto -- Param is not json, but like json.\n", parambytes)
 						}
 						break TOPSTRING
 					default:
@@ -351,12 +351,12 @@ func mergeMapList(headers ...map[string][]string) map[string][]string {
 }
 
 // setHeaderRequest 设置request的头
-func setHeaderRequest(req *http.Request, wf *Workflow) {
+func setHeaderRequest(req *http.Request, wf *Temporary) {
 	req.Header = mergeMapList(req.Header, wf.session.Header, wf.Header)
 }
 
 // setHeaderRequest 设置request的临时Cookie, 永久需要在session上设置cookie
-func setTempCookieRequest(req *http.Request, wf *Workflow) {
+func setTempCookieRequest(req *http.Request, wf *Temporary) {
 	if wf.Cookies != nil {
 		for _, c := range wf.Cookies {
 			req.AddCookie(c)
@@ -365,7 +365,7 @@ func setTempCookieRequest(req *http.Request, wf *Workflow) {
 }
 
 // Execute 执行
-func (wf *Workflow) Execute() (IResponse, error) {
+func (wf *Temporary) Execute() (IResponse, error) {
 
 	req := buildBodyRequest(wf)
 

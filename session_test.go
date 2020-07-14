@@ -304,7 +304,14 @@ func TestSession_SetConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ses := NewSession()
-			ses.SetConfig(tt.args.typeConfig, tt.args.values)
+
+			switch tt.args.typeConfig {
+			case CRequestTimeout:
+				ses.Config().SetTimeout(tt.args.values)
+			case CProxy:
+				ses.Config().SetProxy(tt.args.values)
+			}
+
 			_, err := ses.Get("http://httpbin.org/get").Execute()
 
 			if (err != nil) != tt.wantErr {
@@ -319,8 +326,8 @@ func TestSession_SetConfig(t *testing.T) {
 func TestSession_SetConfigInsecure(t *testing.T) {
 
 	ses := NewSession()
-	ses.SetConfig(CInsecure, true)
 
+	ses.Config().SetInsecure(true)
 	for _, badSSL := range []string{
 		"https://self-signed.badssl.com/",
 		"https://expired.badssl.com/",
@@ -341,7 +348,7 @@ func TestSession_Cookies(t *testing.T) {
 	ses := NewSession()
 
 	t.Run("set cookie", func(t *testing.T) {
-		resp, err := ses.Get("http://httpbin.org/cookies/set").AddKVCookie("a", "1").Execute()
+		resp, err := ses.Get("http://httpbin.org/cookies/set").SetCookieKV("a", "1").Execute()
 		if err != nil {
 			t.Error("cookies set error", err)
 		}
@@ -382,7 +389,7 @@ func TestSession_Header(t *testing.T) {
 
 func TestSession_ConfigEx(t *testing.T) {
 	ses := NewSession()
-	ses.SetConfig(CRequestTimeout, time.Microsecond)
+	ses.Config().SetTimeout(time.Microsecond)
 	resp, err := ses.Get("http://httpbin.org/get").Execute()
 	if err == nil {
 		t.Error(resp)
@@ -392,7 +399,8 @@ func TestSession_ConfigEx(t *testing.T) {
 		}
 	}
 
-	ses.SetConfig(CRequestTimeout, float32(0.0000001))
+	ses.Config().SetTimeout(float32(0.0000001))
+
 	resp, err = ses.Get("http://httpbin.org/get").Execute()
 	if err == nil {
 		t.Error(resp)
@@ -402,16 +410,19 @@ func TestSession_ConfigEx(t *testing.T) {
 		}
 	}
 
-	ses.SetConfig(CKeepAlives, true)
-	ses.SetConfig(CRequestTimeout, int64(5))
+	ses.Config().SetKeepAlives(true)
+	ses.Config().SetTimeout(int64(5))
 	// jar, _ := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	u, err := url.Parse("http://httpbin.org")
 	if err != nil {
 		t.Error(err)
 	} else {
 		// jar.SetCookies(u, []*http.Cookie{&http.Cookie{Name: "Request", Value: "Cookiejar"}})
-		ses.SetConfig(CIsWithCookiejar, false)
-		ses.SetConfig(CIsWithCookiejar, true)
+
+		cfg := ses.Config()
+		cfg.SetWithCookiejar(false)
+		cfg.SetWithCookiejar(true)
+
 		ses.SetCookies(u, []*http.Cookie{&http.Cookie{Name: "Request", Value: "Cookiejar"}, &http.Cookie{Name: "eson", Value: "bad"}})
 		resp, err = ses.Get("http://httpbin.org/get").Execute()
 		if err != nil {
@@ -427,11 +438,11 @@ func TestSession_ConfigEx(t *testing.T) {
 		}
 	}
 
-	ses.SetConfig(CProxy, nil)
+	ses.Config().SetProxy(nil)
 	if u, err := url.Parse("http://" + ProxyAddress); err != nil {
 		t.Error(err)
 	} else {
-		ses.SetConfig(CProxy, u)
+		ses.Config().SetProxy(u)
 	}
 
 	resp, err = ses.Get("http://httpbin.org/get").Execute()
@@ -497,7 +508,7 @@ func TestSession_SetHeader(t *testing.T) {
 
 func TestSession_SetBasicAuth(t *testing.T) {
 	ses := NewSession()
-	ses.SetConfig(CBasicAuth, &BasicAuth{User: "eson", Password: "123456"})
+	ses.Config().SetBasicAuth(&BasicAuth{User: "eson", Password: "123456"})
 	resp, err := ses.Get("http://httpbin.org/basic-auth/eson/123456").Execute()
 	if err != nil {
 		t.Error(err)
@@ -506,7 +517,7 @@ func TestSession_SetBasicAuth(t *testing.T) {
 		t.Error("code != 200, code = ", resp.GetStatus())
 	}
 
-	ses.SetConfig(CBasicAuth, BasicAuth{User: "eson", Password: "12345"})
+	ses.Config().SetBasicAuth(&BasicAuth{User: "eson", Password: "12345"})
 	resp, err = ses.Get("http://httpbin.org/basic-auth/eson/123456").Execute()
 	if err != nil {
 		t.Error(err)
@@ -525,7 +536,7 @@ func TestSession_SetBasicAuth(t *testing.T) {
 		t.Error("code != 401, code = ", resp.GetStatus())
 	}
 
-	ses.SetConfig(CBasicAuth, []string{"son", "123456"})
+	ses.Config().SetBasicAuth("son", "123456")
 	resp, err = ses.Get("http://httpbin.org/basic-auth/eson/123456").Execute()
 	if err != nil {
 		t.Error(err)
@@ -534,7 +545,7 @@ func TestSession_SetBasicAuth(t *testing.T) {
 		t.Error("code != 401, code = ", resp.GetStatus())
 	}
 
-	ses.SetConfig(CBasicAuth, nil)
+	ses.Config().SetBasicAuth(nil)
 	resp, err = ses.Get("http://httpbin.org/basic-auth/eson/123456").Execute()
 	if err != nil {
 		t.Error(err)

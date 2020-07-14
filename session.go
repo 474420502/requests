@@ -1,15 +1,11 @@
 package requests
 
 import (
-	"crypto/tls"
-	"errors"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
-	"reflect"
 	"runtime"
 	"strings"
-	"time"
 
 	"golang.org/x/net/publicsuffix"
 )
@@ -201,80 +197,9 @@ func NewSession() *Session {
 	return &Session{client: client, body: NewBody(), transport: transport, auth: nil, cookiejar: client.Jar, Header: make(http.Header), Is: IsSetting{true}}
 }
 
-// SetConfig 设置配置
-func (ses *Session) SetConfig(typeConfig TypeConfig, values interface{}) {
-
-	switch typeConfig {
-	case CRequestTimeout:
-		switch v := values.(type) {
-		case time.Duration:
-			ses.client.Timeout = v
-		case int:
-			ses.client.Timeout = time.Duration(v * int(time.Second))
-		case int64:
-			ses.client.Timeout = time.Duration(v * int64(time.Second))
-		case float32:
-			ses.client.Timeout = time.Duration(v * float32(time.Second))
-		case float64:
-			ses.client.Timeout = time.Duration(v * float64(time.Second))
-		default:
-			panic(errors.New("error type " + reflect.TypeOf(v).String()))
-		}
-	case CDialTimeout:
-		// TODO: CDialTimeout CRequestTimeout 与 细节
-	case CIsDecompressNoAccept:
-		ses.Is.isDecompressNoAccept = values.(bool)
-	case CKeepAlives:
-		// println(ses.transport.DisableKeepAlives)
-		ses.transport.DisableKeepAlives = !values.(bool)
-	case CIsWithCookiejar:
-		v := values.(bool)
-		if v {
-			if ses.client.Jar == nil {
-				ses.client.Jar = ses.cookiejar
-			}
-		} else {
-			ses.client.Jar = nil
-		}
-	case CProxy:
-		switch v := values.(type) {
-		case string:
-			purl, err := (url.Parse(v))
-			if err != nil {
-				panic(err)
-			}
-			ses.transport.Proxy = http.ProxyURL(purl)
-		case *url.URL:
-			ses.transport.Proxy = http.ProxyURL(v)
-		case nil:
-			ses.transport.Proxy = nil
-		}
-	case CInsecure:
-		ses.transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: values.(bool)}
-	case CTLS:
-		ses.transport.TLSClientConfig = values.(*tls.Config)
-	case CBasicAuth:
-		if ses.auth == nil {
-			ses.auth = &BasicAuth{}
-		}
-
-		switch v := values.(type) {
-		case *BasicAuth:
-			ses.auth.User = v.User
-			ses.auth.Password = v.Password
-		case BasicAuth:
-			ses.auth.User = v.User
-			ses.auth.Password = v.Password
-		case []string:
-			ses.auth.User = v[0]
-			ses.auth.Password = v[1]
-		case nil:
-			ses.auth = nil
-		}
-	default:
-		panic(errors.New("unknown typeConfig " + reflect.TypeOf(typeConfig).String()))
-	}
-	return
+// Config 配置Reqeusts类集合
+func (ses *Session) Config() *Config {
+	return &Config{ses: ses}
 }
 
 // SetQuery 设置url query的持久参数的值
@@ -330,50 +255,50 @@ func (ses *Session) ClearCookies() {
 }
 
 // Head 请求
-func (ses *Session) Head(url string) *Workflow {
-	wf := NewWorkflow(ses, url)
+func (ses *Session) Head(url string) *Temporary {
+	wf := NewTemporary(ses, url)
 	wf.Method = "HEAD"
 	return wf
 }
 
 // Get 请求
-func (ses *Session) Get(url string) *Workflow {
-	wf := NewWorkflow(ses, url)
+func (ses *Session) Get(url string) *Temporary {
+	wf := NewTemporary(ses, url)
 	wf.Method = "GET"
 	return wf
 }
 
 // Post 请求
-func (ses *Session) Post(url string) *Workflow {
-	wf := NewWorkflow(ses, url)
+func (ses *Session) Post(url string) *Temporary {
+	wf := NewTemporary(ses, url)
 	wf.Method = "POST"
 	return wf
 }
 
 // Put 请求
-func (ses *Session) Put(url string) *Workflow {
-	wf := NewWorkflow(ses, url)
+func (ses *Session) Put(url string) *Temporary {
+	wf := NewTemporary(ses, url)
 	wf.Method = "PUT"
 	return wf
 }
 
 // Patch 请求
-func (ses *Session) Patch(url string) *Workflow {
-	wf := NewWorkflow(ses, url)
+func (ses *Session) Patch(url string) *Temporary {
+	wf := NewTemporary(ses, url)
 	wf.Method = "PATCH"
 	return wf
 }
 
 // Options 请求
-func (ses *Session) Options(url string) *Workflow {
-	wf := NewWorkflow(ses, url)
+func (ses *Session) Options(url string) *Temporary {
+	wf := NewTemporary(ses, url)
 	wf.Method = "OPTIONS"
 	return wf
 }
 
 // Delete 请求
-func (ses *Session) Delete(url string) *Workflow {
-	wf := NewWorkflow(ses, url)
+func (ses *Session) Delete(url string) *Temporary {
+	wf := NewTemporary(ses, url)
 	wf.Method = "DELETE"
 	return wf
 }

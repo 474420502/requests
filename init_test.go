@@ -12,7 +12,7 @@ import (
 const ProxyAddress = "localhost:58080"
 
 func init() {
-	log.SetFlags(log.Lshortfile | log.LstdFlags)
+	log.SetFlags(log.Llongfile | log.LstdFlags)
 	go func() {
 		proxy := goproxy.NewProxyHttpServer()
 		proxy.Verbose = true
