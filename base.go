@@ -7,7 +7,7 @@ import (
 	"reflect"
 )
 
-func buildBodyRequest(wf *Workflow) *http.Request {
+func buildBodyRequest(wf *Temporary) *http.Request {
 	var req *http.Request
 	var err error
 	contentType := ""
