@@ -10,7 +10,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-func TestWorkflow(t *testing.T) {
+func TestTemporary(t *testing.T) {
 	ses := NewSession()
 
 	t.Run("set cookie", func(t *testing.T) {
@@ -63,7 +63,7 @@ func TestWorkflow(t *testing.T) {
 
 }
 
-func TestWorkflow_SetHeader(t *testing.T) {
+func TestTemporary_SetHeader(t *testing.T) {
 	ses := NewSession()
 	wf := ses.Get("http://httpbin.org/headers")
 	var header http.Header
@@ -123,7 +123,7 @@ func TestWorkflow_SetHeader(t *testing.T) {
 	}
 }
 
-func TestWorkflow_Cookies(t *testing.T) {
+func TestTemporary_Cookies(t *testing.T) {
 	ses := NewSession()
 	u, err := url.Parse("http://httpbin.org")
 	if err != nil {
@@ -176,7 +176,7 @@ func TestWorkflow_Cookies(t *testing.T) {
 	}
 }
 
-func TestWorkflow_URL(t *testing.T) {
+func TestTemporary_URL(t *testing.T) {
 	ses := NewSession()
 	wf := ses.Get("http://httpbin.org/")
 	u, err := url.Parse("http://httpbin.org/get")
@@ -220,22 +220,22 @@ func TestWorkflow_URL(t *testing.T) {
 	}
 }
 
-func TestWorkflow_Query(t *testing.T) {
+func TestTemporary_Query(t *testing.T) {
 	ses := NewSession()
 	query := make(url.Values)
 	query["session"] = []string{"true"}
 	ses.SetQuery(query)
 	wf := ses.Get("http://httpbin.org/get")
 	wfquery := make(url.Values)
-	wfquery["workflow"] = []string{"do", "to"}
+	wfquery["Temporary"] = []string{"do", "to"}
 	wf.SetQuery(wfquery)
 
 	resp, _ := wf.Execute()
-	result := gjson.Get(string(resp.Content()), "args.workflow")
+	result := gjson.Get(string(resp.Content()), "args.Temporary")
 
 	for _, r := range result.Array() {
 		if !(r.String() == "to" || r.String() == "do") {
-			t.Error("workflow SetQuery error")
+			t.Error("Temporary SetQuery error")
 		}
 	}
 
@@ -243,7 +243,7 @@ func TestWorkflow_Query(t *testing.T) {
 		t.Error("session SetQuery error")
 	}
 
-	if v, ok := wf.GetQuery()["workflow"]; ok {
+	if v, ok := wf.GetQuery()["Temporary"]; ok {
 		sort.Slice(v, func(i, j int) bool {
 			if v[i] > v[j] {
 				return true
@@ -251,18 +251,18 @@ func TestWorkflow_Query(t *testing.T) {
 			return false
 		})
 		if !(v[0] == "to" && v[1] == "do") && len(v) != 2 {
-			t.Error("workflow GetQuery", v)
+			t.Error("Temporary GetQuery", v)
 		}
 	}
 
 	if v, ok := wf.GetQuery()["session"]; ok {
 		if v[0] != "true" && len(v) != 1 {
-			t.Error("workflow error")
+			t.Error("Temporary error")
 		}
 	}
 }
 
-func TestWorkflow_Body(t *testing.T) {
+func TestTemporary_Body(t *testing.T) {
 	ses := NewSession()
 	wf := ses.Post("http://httpbin.org/post")
 	body := NewBody()
@@ -305,7 +305,7 @@ func TestWorkflow_Body(t *testing.T) {
 	// resp, _ = wf.Execute()
 }
 
-func TestWorkflow_BodyAutoJsonMap(t *testing.T) {
+func TestTemporary_BodyAutoJsonMap(t *testing.T) {
 	ses := NewSession()
 	wf := ses.Post("http://httpbin.org/post")
 	wf.SetBodyAuto(map[string]interface{}{"a": 1, "b": map[string]int{"c": 1}})
@@ -320,7 +320,7 @@ func TestWorkflow_BodyAutoJsonMap(t *testing.T) {
 	}
 }
 
-func TestWorkflow_BodyAutoJsonList(t *testing.T) {
+func TestTemporary_BodyAutoJsonList(t *testing.T) {
 	ses := NewSession()
 	wf := ses.Post("http://httpbin.org/post")
 	wf.SetBodyAuto([]interface{}{"a", map[string]interface{}{"b": map[string]int{"c": 1}}})
@@ -334,7 +334,7 @@ func TestWorkflow_BodyAutoJsonList(t *testing.T) {
 		t.Error(string(resp.Content()))
 	}
 
-	// wf = ses.Post("http://httpbin.org/post") workflow 每次执行完都会清除设置.
+	// wf = ses.Post("http://httpbin.org/post") Temporary 每次执行完都会清除设置.
 	wf.SetBodyAuto([]string{"a", "b"})
 	resp, err = wf.Execute()
 	if err != nil {
@@ -347,7 +347,7 @@ func TestWorkflow_BodyAutoJsonList(t *testing.T) {
 	}
 }
 
-func TestWorkflow_BodyAutoRawJson(t *testing.T) {
+func TestTemporary_BodyAutoRawJson(t *testing.T) {
 	ses := NewSession()
 	wf := ses.Post("http://httpbin.org/post")
 	wf.SetBodyAuto(`{"a": 1}`)
