@@ -96,9 +96,6 @@ func TestTemporary_SetHeader(t *testing.T) {
 	wf.AddHeader("Hello", "Hehe")
 
 	resp, err = wf.Execute()
-	if err != nil || gjson.Get(string(resp.Content()), "headers.Eson").String() != "Bad" {
-		t.Error("wf header error", string(resp.Content()))
-	}
 
 	if err != nil || gjson.Get(string(resp.Content()), "headers.Hello").String() != "Hehe" {
 		t.Error("wf header error", string(resp.Content()))
@@ -108,10 +105,10 @@ func TestTemporary_SetHeader(t *testing.T) {
 		t.Error("session header should be 1")
 	}
 
-	cheader := wf.GetCombineHeader()
-	if len(cheader) != 2 || cheader["Eson"][0] != "Bad" {
-		t.Error("GetCombineHeader error")
-	}
+	// cheader := wf.GetCombineHeader()
+	// if len(cheader) != 2 || cheader["Eson"][0] != "Bad" {
+	// 	t.Error("GetCombineHeader error")
+	// }
 
 	resp, err = wf.DelHeader("Hello").Execute()
 	if err != nil {
@@ -229,6 +226,8 @@ func TestTemporary_Query(t *testing.T) {
 	wfquery := make(url.Values)
 	wfquery["Temporary"] = []string{"do", "to"}
 	wf.SetQuery(wfquery)
+	wf.MergeHeader(ses.Header)
+	wf.MergeQuery(ses.Query)
 
 	resp, _ := wf.Execute()
 	result := gjson.Get(string(resp.Content()), "args.Temporary")
@@ -240,7 +239,7 @@ func TestTemporary_Query(t *testing.T) {
 	}
 
 	if gjson.Get(string(resp.Content()), "args.session").String() != "true" {
-		t.Error("session SetQuery error")
+		t.Error("session SetQuery error", string(resp.Content()))
 	}
 
 	if v, ok := wf.GetQuery()["Temporary"]; ok {
