@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"strings"
 )
 
 // Temporary 工作流 设计点: 这个并不影响Session的属性变化 如 NewWorkflow(ses, url).AddHeader() 对ses没影响
@@ -60,10 +59,22 @@ func (wf *Temporary) GetHeader() http.Header {
 	return wf.Header
 }
 
-// GetCombineHeader 获取后的Header信息
-func (wf *Temporary) GetCombineHeader() http.Header {
-	return mergeMapList(wf.session.Header, wf.Header)
+// MergeHeader 合并 Header. 并进 Temporary
+func (wf *Temporary) MergeHeader(cheader http.Header) {
+	for key, values := range cheader {
+		for _, v := range values {
+			wf.Header.Add(key, v)
+		}
+	}
 }
+
+// GetCombineHeader 获取后的Header信息
+// func (wf *Temporary) GetCombineHeader() http.Header {
+// 	if wf.Header != nil {
+// 		return wf.Header
+// 	}
+// 	return zzzzzzz wf.session.Header, wf.Header)
+// }
 
 // DelHeader 添加头信息 Get方法从Header参数上获取
 func (wf *Temporary) DelHeader(key string) *Temporary {
@@ -123,8 +134,8 @@ func (wf *Temporary) SetParsedURL(u *url.URL) *Temporary {
 
 // GetRawURL 获取url的string形式
 func (wf *Temporary) GetRawURL() string {
-	u := strings.Split(wf.ParsedURL.String(), "?")[0] + "?" + wf.GetCombineQuery().Encode()
-	return u
+	// u := strings.Split(wf.ParsedURL.String(), "?")[0] + "?" + wf.GetCombineQuery().Encode()
+	return wf.ParsedURL.String()
 }
 
 // SetRawURL 设置 url
@@ -142,23 +153,41 @@ func (wf *Temporary) GetQuery() url.Values {
 	return wf.ParsedURL.Query()
 }
 
-// GetCombineQuery 获取Query参数
-func (wf *Temporary) GetCombineQuery() url.Values {
-	if wf.ParsedURL != nil {
-		vs := wf.ParsedURL.Query()
-		return mergeMapList(wf.session.GetQuery(), vs)
-	}
-	return nil
-}
+// GetCombineQuery 获取 与Session合并后的参数
+// Query参数 Session 于 Temporary 可能参数设置不一样.
+// Temporay修改不影响Session
+// func (wf *Temporary) GetCombineQuery() url.Values {
+// 	if wf.ParsedURL != nil {
+// 		vs := wf.ParsedURL.Query()
+// 		return mergeMapList(wf.session.GetQuery(), vs)
+// 	}
+// 	return nil
+// }
 
 // SetQuery 设置Query参数
 func (wf *Temporary) SetQuery(query url.Values) *Temporary {
 	if query == nil {
 		return wf
 	}
-	query = (url.Values)(mergeMapList(wf.session.Query, query))
+	// query = (url.Values)(mergeMapList(wf.session.Query, query))
 	wf.ParsedURL.RawQuery = query.Encode()
 	return wf
+}
+
+// MergeQuery 设置Query参数
+func (wf *Temporary) MergeQuery(query url.Values) {
+	tpquery := wf.ParsedURL.Query()
+	for key, values := range query {
+		for _, v := range values {
+			tpquery.Add(key, v)
+		}
+	}
+	wf.ParsedURL.RawQuery = tpquery.Encode()
+}
+
+// QueryParam 设置Query参数
+func (wf *Temporary) QueryParam(key string) *Param {
+	return &Param{Temp: wf, Key: key}
 }
 
 var regexGetPath = regexp.MustCompile("/[^/]*")
@@ -248,7 +277,7 @@ func (wf *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 							wf.Body.SetPrefix(TypeJSON)
 							wf.Body.SetIOBody(parambytes)
 						} else {
-							log.Println("SetBodyAuto -- Param is not json, but like json.\n", parambytes)
+							log.Println("SetBodyAuto -- Param is not json, but like json.\n", string(parambytes))
 						}
 						break TOPSTRING
 					default:
@@ -318,41 +347,54 @@ func (wf *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 	return wf
 }
 
-func mergeMapList(headers ...map[string][]string) map[string][]string {
+// func mergeMapList(headers ...map[string][]string) map[string][]string {
 
-	set := make(map[string]map[string]int)
-	merged := make(map[string][]string)
+// 	set := make(map[string]map[string]int)
+// 	merged := make(map[string][]string)
 
-	for _, header := range headers {
-		for key, values := range header {
-			for _, v := range values {
-				if vs, ok := set[key]; ok {
-					vs[v] = 1
-				} else {
-					set[key] = make(map[string]int)
-					set[key][v] = 1
-				}
-			}
-		}
-	}
+// 	for _, header := range headers {
+// 		for key, values := range header {
 
-	for key, mvalue := range set {
-		for v := range mvalue {
-			// merged.Add(key, v)
-			if mergeValue, ok := merged[key]; ok {
-				merged[key] = append(mergeValue, v)
-			} else {
-				merged[key] = []string{v}
-			}
-		}
-	}
+// 			for _, v := range values {
+// 				// v := values[0]
+// 				if vs, ok := set[key]; ok {
+// 					vs[v] = 1
+// 				} else {
+// 					set[key] = make(map[string]int)
+// 					set[key][v] = 1
+// 				}
+// 			}
 
-	return merged
-}
+// 		}
+// 	}
+
+// 	for key, mvalue := range set {
+// 		for v := range mvalue {
+// 			// merged.Add(key, v)
+// 			if mergeValue, ok := merged[key]; ok {
+// 				merged[key] = append(mergeValue, v)
+// 			} else {
+// 				merged[key] = []string{v}
+// 			}
+// 		}
+// 	}
+
+// 	return merged
+// }
 
 // setHeaderRequest 设置request的头
 func setHeaderRequest(req *http.Request, wf *Temporary) {
-	req.Header = mergeMapList(req.Header, wf.session.Header, wf.Header)
+	var header http.Header
+	if len(wf.Header) != 0 {
+		header = wf.Header
+	} else {
+		header = wf.session.Header
+	}
+	for key, values := range header {
+		for _, v := range values {
+			req.Header.Add(key, v)
+		}
+	}
 }
 
 // setHeaderRequest 设置request的临时Cookie, 永久需要在session上设置cookie
@@ -368,7 +410,6 @@ func setTempCookieRequest(req *http.Request, wf *Temporary) {
 func (wf *Temporary) Execute() (IResponse, error) {
 
 	req := buildBodyRequest(wf)
-
 	setHeaderRequest(req, wf)
 	setTempCookieRequest(req, wf)
 
