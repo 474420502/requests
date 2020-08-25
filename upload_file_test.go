@@ -1,6 +1,12 @@
 package requests
 
 import (
+	"bytes"
+	"fmt"
+	"io"
+	"log"
+	"mime/multipart"
+	"net/http"
 	"testing"
 
 	"github.com/tidwall/gjson"
@@ -103,5 +109,50 @@ func TestUploadFile(t *testing.T) {
 			t.Error("file error", string(resp.Content()))
 		}
 	}
+}
 
+func TestBoundary(t *testing.T) {
+	bodyBuf := &bytes.Buffer{}
+	bodyWriter := multipart.NewWriter(bodyBuf)
+
+	//mulitipart/form-data时,需要获取自己关闭的boundary
+	boundary := "fsdqwedsads"
+	bodyWriter.SetBoundary(boundary)
+	closeBuf := bytes.NewBufferString(fmt.Sprintf("\r\n--%s--\r\n", boundary))
+
+	w1, err := bodyWriter.CreateFormField("key1")
+	if err != nil {
+		panic(err)
+	}
+	w1.Write([]byte("haha"))
+	//建立写入socket的reader对象
+
+	w2, err := bodyWriter.CreateFormField("key2")
+	w2.Write([]byte("xixi"))
+
+	requestReader := io.MultiReader(bodyBuf, closeBuf)
+	req, err := http.NewRequest("POST", "http://httpbin.org/post", requestReader)
+	if err != nil {
+		panic(err)
+	}
+
+	// body, err := ioutil.ReadAll(req.Body)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// log.Println(string(body))
+
+	//设置http头
+	req.Header.Add("Content-Type", "multipart/form-data; boundary="+boundary)
+	req.ContentLength = int64(bodyBuf.Len()) + int64(closeBuf.Len())
+	log.Println(req.ContentLength)
+	cli := &http.Client{}
+	resp, err := cli.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	var buf = &bytes.Buffer{}
+	resp.Write(buf)
+
+	t.Error(buf.String())
 }

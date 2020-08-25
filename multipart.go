@@ -2,10 +2,13 @@ package requests
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"mime/multipart"
+	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 )
 
@@ -107,4 +110,46 @@ func createMultipart(postParams IBody, params []interface{}) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func postFile(filename string, target_url string) *http.Request {
+	bodybuf := bytes.NewBufferString("")
+	bodywriter := multipart.NewWriter(bodybuf)
+
+	// use the body_writer to write the Part headers to the buffer
+	_, err := bodywriter.CreateFormFile("userfile", filename)
+	if err != nil {
+		fmt.Println("error writing to buffer")
+		return nil
+	}
+
+	// the file data will be the second part of the body
+	fh, err := os.Open(filename)
+	if err != nil {
+		fmt.Println("error opening file")
+		return nil
+	}
+	// need to know the boundary to properly close the part myself.
+	boundary := bodywriter.Boundary()
+	//close_string := fmt.Sprintf("\r\n--%s--\r\n", boundary)
+	closebuf := bytes.NewBufferString(fmt.Sprintf("\r\n--%s--\r\n", boundary))
+
+	// use multi-reader to defer the reading of the file data until
+	// writing to the socket buffer.
+	requestreader := io.MultiReader(bodybuf, fh, closebuf)
+	fi, err := fh.Stat()
+	if err != nil {
+		fmt.Printf("Error Stating file: %s", filename)
+		return nil
+	}
+	req, err := http.NewRequest("POST", target_url, requestreader)
+	if err != nil {
+		return nil
+	}
+
+	// Set headers for multipart, and Content Length
+	req.Header.Add("Content-Type", "multipart/form-data; boundary="+boundary)
+	req.ContentLength = fi.Size() + int64(bodybuf.Len()) + int64(closebuf.Len())
+
+	return req
 }
