@@ -1,8 +1,10 @@
 package requests
 
 import (
+	"bytes"
 	"encoding/json"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -11,6 +13,7 @@ import (
 // Temporary 工作流 设计点: 这个并不影响Session的属性变化 如 NewWorkflow(ses, url).AddHeader() 对ses没影响
 type Temporary struct {
 	session   *Session
+	mwriter   *MultipartWriter
 	ParsedURL *url.URL
 	Method    string
 	Body      IBody
@@ -20,100 +23,92 @@ type Temporary struct {
 
 // NewTemporary new and init workflow
 func NewTemporary(ses *Session, urlstr string) *Temporary {
-	wf := &Temporary{}
-	wf.SwitchSession(ses)
-	wf.SetRawURL(urlstr)
+	tp := &Temporary{}
+	tp.SwitchSession(ses)
+	tp.SetRawURL(urlstr)
 
-	wf.Body = NewBody()
-	wf.Header = make(http.Header)
-	wf.Cookies = make(map[string]*http.Cookie)
-	return wf
+	tp.Body = NewBody()
+	tp.Header = make(http.Header)
+	tp.Cookies = make(map[string]*http.Cookie)
+	return tp
 }
 
 // SwitchSession 替换Session
-func (wf *Temporary) SwitchSession(ses *Session) {
-	wf.session = ses
+func (tp *Temporary) SwitchSession(ses *Session) {
+	tp.session = ses
 }
 
 // AddHeader 添加头信息  Get方法从Header参数上获取 必须符合规范 HaHa -> Haha 如果真要HaHa,只能这样 Ha-Ha
-func (wf *Temporary) AddHeader(key, value string) *Temporary {
-	wf.Header[key] = append(wf.Header[key], value)
-	return wf
+func (tp *Temporary) AddHeader(key, value string) *Temporary {
+	tp.Header[key] = append(tp.Header[key], value)
+	return tp
 }
 
 // SetHeader 设置完全替换原有Header 必须符合规范 HaHa -> Haha 如果真要HaHa,只能这样 Ha-Ha
-func (wf *Temporary) SetHeader(header http.Header) *Temporary {
-	wf.Header = make(http.Header)
+func (tp *Temporary) SetHeader(header http.Header) *Temporary {
+	tp.Header = make(http.Header)
 	for k, HValues := range header {
 		var newHValues []string
 		for _, value := range HValues {
 			newHValues = append(newHValues, value)
 		}
-		wf.Header[k] = newHValues
+		tp.Header[k] = newHValues
 	}
-	return wf
+	return tp
 }
 
 // GetHeader 获取Workflow Header
-func (wf *Temporary) GetHeader() http.Header {
-	return wf.Header
+func (tp *Temporary) GetHeader() http.Header {
+	return tp.Header
 }
 
 // MergeHeader 合并 Header. 并进 Temporary
-func (wf *Temporary) MergeHeader(cheader http.Header) {
+func (tp *Temporary) MergeHeader(cheader http.Header) {
 	for key, values := range cheader {
 		for _, v := range values {
-			wf.Header.Add(key, v)
+			tp.Header.Add(key, v)
 		}
 	}
 }
 
-// GetCombineHeader 获取后的Header信息
-// func (wf *Temporary) GetCombineHeader() http.Header {
-// 	if wf.Header != nil {
-// 		return wf.Header
-// 	}
-// 	return zzzzzzz wf.session.Header, wf.Header)
-// }
-
 // DelHeader 添加头信息 Get方法从Header参数上获取
-func (wf *Temporary) DelHeader(key string) *Temporary {
-	wf.Header.Del(key)
-	return wf
+func (tp *Temporary) DelHeader(key string) *Temporary {
+	tp.Header.Del(key)
+	return tp
 }
 
 // SetCookie 添加Cookie
-func (wf *Temporary) SetCookie(c *http.Cookie) *Temporary {
-	wf.Cookies[c.Name] = c
-	return wf
+func (tp *Temporary) SetCookie(c *http.Cookie) *Temporary {
+	tp.Cookies[c.Name] = c
+	return tp
 }
 
 // AddCookies 添加[]*http.Cookie
-func (wf *Temporary) AddCookies(cookies []*http.Cookie) *Temporary {
+func (tp *Temporary) AddCookies(cookies []*http.Cookie) *Temporary {
 	for _, c := range cookies {
-		wf.SetCookie(c)
+		tp.SetCookie(c)
 	}
-	return wf
+	return tp
 }
 
 // SetCookieKV 添加 以 key value 的 Cookie
-func (wf *Temporary) SetCookieKV(name, value string) *Temporary {
-	wf.Cookies[name] = &http.Cookie{Name: name, Value: value}
-	return wf
+func (tp *Temporary) SetCookieKV(name, value string) *Temporary {
+	tp.Cookies[name] = &http.Cookie{Name: name, Value: value}
+	return tp
 }
 
 // DelCookie 删除Cookie
-func (wf *Temporary) DelCookie(name interface{}) *Temporary {
+func (tp *Temporary) DelCookie(name interface{}) *Temporary {
 	switch n := name.(type) {
 	case string:
-		if _, ok := wf.Cookies[n]; ok {
-			delete(wf.Cookies, n)
-			return wf
+		if _, ok := tp.Cookies[n]; ok {
+			delete(tp.Cookies, n)
+			return tp
 		}
 	case *http.Cookie:
-		if _, ok := wf.Cookies[n.Name]; ok {
-			delete(wf.Cookies, n.Name)
-			return wf
+		if _, ok := tp.Cookies[n.Name]; ok {
+			delete(tp.Cookies, n.Name)
+			return tp
 		}
 	default:
 		panic("name type is not support")
@@ -122,84 +117,73 @@ func (wf *Temporary) DelCookie(name interface{}) *Temporary {
 }
 
 // GetParsedURL 获取url的string形式
-func (wf *Temporary) GetParsedURL() *url.URL {
-	return wf.ParsedURL
+func (tp *Temporary) GetParsedURL() *url.URL {
+	return tp.ParsedURL
 }
 
 // SetParsedURL 获取url的string形式
-func (wf *Temporary) SetParsedURL(u *url.URL) *Temporary {
-	wf.ParsedURL = u
-	return wf
+func (tp *Temporary) SetParsedURL(u *url.URL) *Temporary {
+	tp.ParsedURL = u
+	return tp
 }
 
 // GetRawURL 获取url的string形式
-func (wf *Temporary) GetRawURL() string {
+func (tp *Temporary) GetRawURL() string {
 	// u := strings.Split(wf.ParsedURL.String(), "?")[0] + "?" + wf.GetCombineQuery().Encode()
-	return wf.ParsedURL.String()
+	return tp.ParsedURL.String()
 }
 
 // SetRawURL 设置 url
-func (wf *Temporary) SetRawURL(srcURL string) *Temporary {
+func (tp *Temporary) SetRawURL(srcURL string) *Temporary {
 	purl, err := url.ParseRequestURI(srcURL)
 	if err != nil {
 		panic(err)
 	}
-	wf.ParsedURL = purl
-	return wf
+	tp.ParsedURL = purl
+	return tp
 }
 
 // GetQuery 获取Query参数
-func (wf *Temporary) GetQuery() url.Values {
-	return wf.ParsedURL.Query()
+func (tp *Temporary) GetQuery() url.Values {
+	return tp.ParsedURL.Query()
 }
 
-// GetCombineQuery 获取 与Session合并后的参数
-// Query参数 Session 于 Temporary 可能参数设置不一样.
-// Temporay修改不影响Session
-// func (wf *Temporary) GetCombineQuery() url.Values {
-// 	if wf.ParsedURL != nil {
-// 		vs := wf.ParsedURL.Query()
-// 		return mergeMapList(wf.session.GetQuery(), vs)
-// 	}
-// 	return nil
-// }
-
 // SetQuery 设置Query参数
-func (wf *Temporary) SetQuery(query url.Values) *Temporary {
+func (tp *Temporary) SetQuery(query url.Values) *Temporary {
 	if query == nil {
-		return wf
+		return tp
 	}
 	// query = (url.Values)(mergeMapList(wf.session.Query, query))
-	wf.ParsedURL.RawQuery = query.Encode()
-	return wf
+	tp.ParsedURL.RawQuery = query.Encode()
+	return tp
 }
 
 // MergeQuery 设置Query参数
-func (wf *Temporary) MergeQuery(query url.Values) {
-	tpquery := wf.ParsedURL.Query()
+func (tp *Temporary) MergeQuery(query url.Values) {
+	tpquery := tp.ParsedURL.Query()
 	for key, values := range query {
 		for _, v := range values {
 			tpquery.Add(key, v)
 		}
 	}
-	wf.ParsedURL.RawQuery = tpquery.Encode()
+	tp.ParsedURL.RawQuery = tpquery.Encode()
 }
 
 // QueryParam 设置Query参数
-func (wf *Temporary) QueryParam(key string) *Param {
-	return &Param{Temp: wf, Key: key}
+func (tp *Temporary) QueryParam(key string) *Param {
+	return &Param{Temp: tp, Key: key}
 }
 
 var regexGetPath = regexp.MustCompile("/[^/]*")
 
 // GetURLPath 获取Path参数 http://localhost/anything/user/pwd return [/anything /user /pwd]
-func (wf *Temporary) GetURLPath() []string {
-	return regexGetPath.FindAllString(wf.ParsedURL.Path, -1)
+func (tp *Temporary) GetURLPath() []string {
+	return regexGetPath.FindAllString(tp.ParsedURL.Path, -1)
 }
 
 // GetURLRawPath 获取未分解Path参数
-func (wf *Temporary) GetURLRawPath() string {
-	return wf.ParsedURL.Path
+func (tp *Temporary) GetURLRawPath() string {
+	return tp.ParsedURL.Path
 }
 
 // encodePath path格式每个item都必须以/开头
@@ -215,39 +199,54 @@ func encodePath(path []string) string {
 }
 
 // SetURLPath 设置Path参数 对应 GetURLPath
-func (wf *Temporary) SetURLPath(path []string) *Temporary {
+func (tp *Temporary) SetURLPath(path []string) *Temporary {
 	if path == nil {
-		return wf
+		return tp
 	}
-	wf.ParsedURL.Path = encodePath(path)
-	return wf
+	tp.ParsedURL.Path = encodePath(path)
+	return tp
 }
 
 // SetURLRawPath 设置 参数 eg. /get = http:// hostname + /get
-func (wf *Temporary) SetURLRawPath(path string) *Temporary {
+func (tp *Temporary) SetURLRawPath(path string) *Temporary {
 	if path[0] != '/' {
-		wf.ParsedURL.Path = "/" + path
+		tp.ParsedURL.Path = "/" + path
 	} else {
-		wf.ParsedURL.Path = path
+		tp.ParsedURL.Path = path
 	}
-	return wf
+	return tp
 }
 
 // SetBody 参数设置
-func (wf *Temporary) SetBody(body IBody) *Temporary {
-	wf.Body = body
-	return wf
+func (tp *Temporary) SetBody(body IBody) *Temporary {
+	tp.mwriter = nil
+	tp.Body = body
+	return tp
 }
 
 // GetBody 参数设置
-func (wf *Temporary) GetBody() IBody {
-	return wf.Body
+func (tp *Temporary) GetBody() IBody {
+	return tp.Body
+}
+
+// GetBodyMultipart if get multipart, body = NewBody.  使用multipart/form-data. 传递keyvalue. 传递file.
+// 每次都需要重置
+func (tp *Temporary) GetBodyMultipart() *MultipartWriter {
+	mw := &MultipartWriter{}
+	var buf = &bytes.Buffer{}
+	mwriter := multipart.NewWriter(buf)
+	tp.Body.SetIOBody(buf)
+	mw.mwriter = mwriter
+	tp.mwriter = mw
+	return mw
 }
 
 // SetBodyAuto 参数设置
-func (wf *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
+func (tp *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 
 	if params != nil {
+		tp.mwriter = nil
+
 		plen := len(params)
 		defaultContentType := TypeURLENCODED
 
@@ -256,11 +255,11 @@ func (wf *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 			defaultContentType = t.(string)
 		}
 
-		wf.Body.SetPrefix(defaultContentType)
+		tp.Body.SetPrefix(defaultContentType)
 
 		switch defaultContentType {
 		case TypeFormData:
-			createMultipart(wf.Body, params) // 还存在 Mixed的可能
+			createMultipart(tp.Body, params) // 还存在 Mixed的可能
 		default:
 			var values url.Values
 			switch param := params[0].(type) {
@@ -274,8 +273,8 @@ func (wf *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 						continue
 					case '[', '{':
 						if json.Valid(parambytes) {
-							wf.Body.SetPrefix(TypeJSON)
-							wf.Body.SetIOBody(parambytes)
+							tp.Body.SetPrefix(TypeJSON)
+							tp.Body.SetIOBody(parambytes)
 						} else {
 							log.Println("SetBodyAuto -- Param is not json, but like json.\n", string(parambytes))
 						}
@@ -284,7 +283,7 @@ func (wf *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 						break TOPSTRING
 					}
 				}
-				wf.Body.SetIOBody(parambytes)
+				tp.Body.SetIOBody(parambytes)
 			case []byte:
 
 			TOPBYTES:
@@ -294,8 +293,8 @@ func (wf *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 						continue
 					case '[', '{':
 						if json.Valid(param) {
-							wf.Body.SetPrefix(TypeJSON)
-							wf.Body.SetIOBody(param)
+							tp.Body.SetPrefix(TypeJSON)
+							tp.Body.SetIOBody(param)
 						} else {
 							log.Println("SetBodyAuto -- Param is not json, but like json.")
 						}
@@ -304,83 +303,48 @@ func (wf *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 						break TOPBYTES
 					}
 				}
-				wf.Body.SetIOBody(param)
+				tp.Body.SetIOBody(param)
 			case map[string]interface{}, []string, []interface{}:
 				paramjson, err := json.Marshal(param)
 				if err != nil {
 					log.Panic(err)
 				}
-				wf.Body.SetPrefix(TypeJSON)
-				wf.Body.SetIOBody(paramjson)
+				tp.Body.SetPrefix(TypeJSON)
+				tp.Body.SetIOBody(paramjson)
 
 			case map[string]string:
 				values := make(url.Values)
 				for k, v := range param {
 					values.Set(k, v)
 				}
-				wf.Body.SetIOBody([]byte(values.Encode()))
+				tp.Body.SetIOBody([]byte(values.Encode()))
 
 			case map[string][]string:
 				values = param
-				wf.Body.SetIOBody([]byte(values.Encode()))
+				tp.Body.SetIOBody([]byte(values.Encode()))
 
 			case *UploadFile:
 				params = append(params, TypeFormData)
-				wf.Body.SetPrefix(TypeFormData)
-				createMultipart(wf.Body, params)
+				tp.Body.SetPrefix(TypeFormData)
+				createMultipart(tp.Body, params)
 			case UploadFile:
 				params = append(params, TypeFormData)
-				wf.Body.SetPrefix(TypeFormData)
-				createMultipart(wf.Body, params)
+				tp.Body.SetPrefix(TypeFormData)
+				createMultipart(tp.Body, params)
 			case []*UploadFile:
 				params = append(params, TypeFormData)
-				wf.Body.SetPrefix(TypeFormData)
-				createMultipart(wf.Body, params)
+				tp.Body.SetPrefix(TypeFormData)
+				createMultipart(tp.Body, params)
 			case []UploadFile:
 				params = append(params, TypeFormData)
-				wf.Body.SetPrefix(TypeFormData)
-				createMultipart(wf.Body, params)
+				tp.Body.SetPrefix(TypeFormData)
+				createMultipart(tp.Body, params)
 			}
 		}
 
 	}
-	return wf
+	return tp
 }
-
-// func mergeMapList(headers ...map[string][]string) map[string][]string {
-
-// 	set := make(map[string]map[string]int)
-// 	merged := make(map[string][]string)
-
-// 	for _, header := range headers {
-// 		for key, values := range header {
-
-// 			for _, v := range values {
-// 				// v := values[0]
-// 				if vs, ok := set[key]; ok {
-// 					vs[v] = 1
-// 				} else {
-// 					set[key] = make(map[string]int)
-// 					set[key][v] = 1
-// 				}
-// 			}
-
-// 		}
-// 	}
-
-// 	for key, mvalue := range set {
-// 		for v := range mvalue {
-// 			// merged.Add(key, v)
-// 			if mergeValue, ok := merged[key]; ok {
-// 				merged[key] = append(mergeValue, v)
-// 			} else {
-// 				merged[key] = []string{v}
-// 			}
-// 		}
-// 	}
-
-// 	return merged
-// }
 
 // setHeaderRequest 设置request的头
 func setHeaderRequest(req *http.Request, wf *Temporary) {
@@ -406,22 +370,25 @@ func setTempCookieRequest(req *http.Request, wf *Temporary) {
 	}
 }
 
-// Execute 执行
-func (wf *Temporary) Execute() (IResponse, error) {
+// Execute 执行. 请求后会清楚Body的内容. 需要重新
+func (tp *Temporary) Execute() (IResponse, error) {
 
-	req := buildBodyRequest(wf)
-	setHeaderRequest(req, wf)
-	setTempCookieRequest(req, wf)
+	req := buildBodyRequest(tp)
+	setHeaderRequest(req, tp)
+	setTempCookieRequest(req, tp)
 
-	if wf.session.auth != nil {
-		req.SetBasicAuth(wf.session.auth.User, wf.session.auth.Password)
+	if tp.session.auth != nil {
+		req.SetBasicAuth(tp.session.auth.User, tp.session.auth.Password)
 	}
 
-	resp, err := wf.session.client.Do(req)
+	resp, err := tp.session.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 
-	wf.Body = NewBody()
-	return FromHTTPResponse(resp, wf.session.Is.isDecompressNoAccept)
+	if tp.session.Is.isClearBodyEvery {
+		tp.Body = NewBody()
+	}
+
+	return FromHTTPResponse(resp, tp.session.Is.isDecompressNoAccept)
 }

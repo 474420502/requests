@@ -41,14 +41,14 @@ func (body *Body) GetIOBody() interface{} {
 func (body *Body) ContentType() string {
 	content := body.prefix
 	for kvalue := range body.contentTypes {
-		content += kvalue + ";"
+		content += kvalue + "; "
 	}
-	return strings.TrimRight(content, ";")
+	return strings.TrimRight(content, "; ")
 }
 
 // SetPrefix SetPrefix 和 AddContentType的顺序会影响到ContentType()的返回结果
 func (body *Body) SetPrefix(ct string) {
-	body.prefix = strings.TrimRight(ct, ";") + ";"
+	body.prefix = strings.TrimRight(ct, "; ") + "; "
 }
 
 // AddContentType 添加 Add Type类型
@@ -89,13 +89,14 @@ type BasicAuth struct {
 // IsSetting 是否设置的一些情景
 type IsSetting struct {
 	isDecompressNoAccept bool
+	isClearBodyEvery     bool
 }
 
 // Session 的基本方法
 type Session struct {
 	auth *BasicAuth
 
-	body IBody
+	// body IBody
 
 	client    *http.Client
 	cookiejar http.CookieJar
@@ -194,7 +195,7 @@ func NewSession() *Session {
 	}
 
 	client.Jar = cjar
-	return &Session{client: client, body: NewBody(), transport: transport, auth: nil, cookiejar: client.Jar, Header: make(http.Header), Is: IsSetting{true}}
+	return &Session{client: client, transport: transport, auth: nil, cookiejar: client.Jar, Header: make(http.Header), Is: IsSetting{true, true}}
 }
 
 // Config 配置Reqeusts类集合

@@ -2,12 +2,64 @@ package requests
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"mime/multipart"
 	"net/url"
 	"strconv"
+	"strings"
 )
+
+// MultipartWriter Only Write data. Execute() will with multipart data
+type MultipartWriter struct {
+	fileindex int
+	mwriter   *multipart.Writer
+}
+
+// SetBoundary overrides the Writer's default randomly-generated boundary separator with an explicit value.
+// SetBoundary must be called before any parts are created, may only contain certain ASCII characters, and must be non-empty and at most 70 bytes long.
+func (mw *MultipartWriter) SetBoundary(boundary string) error {
+	return mw.mwriter.SetBoundary(boundary)
+}
+
+// Boundary returns the Writer's boundary.
+func (mw *MultipartWriter) Boundary() string {
+	return mw.mwriter.Boundary()
+}
+
+// AddField write name value with boundary
+func (mw *MultipartWriter) AddField(name, value string) error {
+	return mw.mwriter.WriteField(name, value)
+}
+
+// AddFile write name value with boundary
+func (mw *MultipartWriter) AddFile(filename string, dataReader io.Reader) error {
+	fn := fmt.Sprintf("file%d", mw.fileindex)
+	w, err := mw.mwriter.CreateFormFile(fn, filename)
+	if err != nil {
+		return err
+	}
+	mw.fileindex++
+	_, err = io.Copy(w, dataReader)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// AddFileEx write name value with boundary, fieldname
+func (mw *MultipartWriter) AddFileEx(fieldname string, filename string, dataReader io.Reader) error {
+	w, err := mw.mwriter.CreateFormFile(fieldname, filename)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(w, dataReader)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func writeFormUploadFile(mwriter *multipart.Writer, ufile *UploadFile) {
 	part, err := mwriter.CreateFormFile(ufile.FieldName, ufile.FileName)
@@ -100,7 +152,12 @@ func createMultipart(postParams IBody, params []interface{}) {
 		}
 	}
 
-	postParams.AddContentType(mwriter.FormDataContentType())
+	b := mwriter.Boundary()
+	if strings.ContainsAny(b, `()<>@,;:\"/[]?= `) {
+		b = `"` + b + `"`
+	}
+
+	postParams.AddContentType("boundary=" + b)
 	postParams.SetIOBody(body)
 
 	err := mwriter.Close()
