@@ -1,8 +1,6 @@
 package requests
 
 import (
-	"bytes"
-	"mime/multipart"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -416,11 +414,4 @@ func TestTemporary_BodyAutoRawJson(t *testing.T) {
 	if resultstr == "123" {
 		t.Error(string(resp.Content()))
 	}
-}
-
-func TestTemporary_Bound(t *testing.T) {
-	buf := &bytes.Buffer{}
-	writer := multipart.NewWriter(buf)
-
-	t.Error(writer.Boundary())
 }

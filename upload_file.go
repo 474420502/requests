@@ -24,23 +24,23 @@ func (ufile *UploadFile) GetFileName() string {
 	return ufile.FileName
 }
 
-// SetFileReaderCloser 设置FileName属性
-func (ufile *UploadFile) SetFileReaderCloser(readerCloser io.ReadCloser) {
+// SetFile 设置FileName属性
+func (ufile *UploadFile) SetFile(readerCloser io.ReadCloser) {
 	ufile.FileReaderCloser = readerCloser
 }
 
-// SetFileReaderCloserFromFile 设置FileName属性
-func (ufile *UploadFile) SetFileReaderCloserFromFile(filename string) error {
+// SetFileFromPath 设置FileName属性
+func (ufile *UploadFile) SetFileFromPath(filename string) error {
 	fd, err := os.Open(filename)
 	if err != nil {
 		return err
 	}
-	ufile.SetFileReaderCloser(fd)
+	ufile.SetFile(fd)
 	return nil
 }
 
-// GetFileReaderCloser 设置FileName属性
-func (ufile *UploadFile) GetFileReaderCloser() io.ReadCloser {
+// GetFile 设置FileName属性
+func (ufile *UploadFile) GetFile() io.ReadCloser {
 	return ufile.FileReaderCloser
 }
 

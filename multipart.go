@@ -6,11 +6,60 @@ import (
 	"io"
 	"log"
 	"mime/multipart"
-	"net/http"
 	"net/url"
-	"os"
 	"strconv"
+	"strings"
 )
+
+// MultipartWriter Only Write data. Execute() will with multipart data
+type MultipartWriter struct {
+	fileindex int
+	mwriter   *multipart.Writer
+}
+
+// SetBoundary overrides the Writer's default randomly-generated boundary separator with an explicit value.
+// SetBoundary must be called before any parts are created, may only contain certain ASCII characters, and must be non-empty and at most 70 bytes long.
+func (mw *MultipartWriter) SetBoundary(boundary string) error {
+	return mw.mwriter.SetBoundary(boundary)
+}
+
+// Boundary returns the Writer's boundary.
+func (mw *MultipartWriter) Boundary() string {
+	return mw.mwriter.Boundary()
+}
+
+// AddField write name value with boundary
+func (mw *MultipartWriter) AddField(name, value string) error {
+	return mw.mwriter.WriteField(name, value)
+}
+
+// AddFile write name value with boundary
+func (mw *MultipartWriter) AddFile(filename string, dataReader io.Reader) error {
+	fn := fmt.Sprintf("file%d", mw.fileindex)
+	w, err := mw.mwriter.CreateFormFile(fn, filename)
+	if err != nil {
+		return err
+	}
+	mw.fileindex++
+	_, err = io.Copy(w, dataReader)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// AddFileEx write name value with boundary, fieldname
+func (mw *MultipartWriter) AddFileEx(fieldname string, filename string, dataReader io.Reader) error {
+	w, err := mw.mwriter.CreateFormFile(fieldname, filename)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(w, dataReader)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func writeFormUploadFile(mwriter *multipart.Writer, ufile *UploadFile) {
 	part, err := mwriter.CreateFormFile(ufile.FieldName, ufile.FileName)
@@ -103,53 +152,16 @@ func createMultipart(postParams IBody, params []interface{}) {
 		}
 	}
 
-	postParams.AddContentType(mwriter.FormDataContentType())
+	b := mwriter.Boundary()
+	if strings.ContainsAny(b, `()<>@,;:\"/[]?= `) {
+		b = `"` + b + `"`
+	}
+
+	postParams.AddContentType("boundary=" + b)
 	postParams.SetIOBody(body)
 
 	err := mwriter.Close()
 	if err != nil {
 		panic(err)
 	}
-}
-
-func postFile(filename string, target_url string) *http.Request {
-	bodybuf := bytes.NewBufferString("")
-	bodywriter := multipart.NewWriter(bodybuf)
-
-	// use the body_writer to write the Part headers to the buffer
-	_, err := bodywriter.CreateFormFile("userfile", filename)
-	if err != nil {
-		fmt.Println("error writing to buffer")
-		return nil
-	}
-
-	// the file data will be the second part of the body
-	fh, err := os.Open(filename)
-	if err != nil {
-		fmt.Println("error opening file")
-		return nil
-	}
-	// need to know the boundary to properly close the part myself.
-	boundary := bodywriter.Boundary()
-	//close_string := fmt.Sprintf("\r\n--%s--\r\n", boundary)
-	closebuf := bytes.NewBufferString(fmt.Sprintf("\r\n--%s--\r\n", boundary))
-
-	// use multi-reader to defer the reading of the file data until
-	// writing to the socket buffer.
-	requestreader := io.MultiReader(bodybuf, fh, closebuf)
-	fi, err := fh.Stat()
-	if err != nil {
-		fmt.Printf("Error Stating file: %s", filename)
-		return nil
-	}
-	req, err := http.NewRequest("POST", target_url, requestreader)
-	if err != nil {
-		return nil
-	}
-
-	// Set headers for multipart, and Content Length
-	req.Header.Add("Content-Type", "multipart/form-data; boundary="+boundary)
-	req.ContentLength = fi.Size() + int64(bodybuf.Len()) + int64(closebuf.Len())
-
-	return req
 }
