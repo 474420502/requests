@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"regexp"
 	"testing"
 )
 
@@ -111,7 +112,7 @@ func TestQueryParam(t *testing.T) {
 
 func TestQueryArrayParam(t *testing.T) {
 	var err error
-	var p *Param
+	var p IParam
 	ses := NewSession()
 	tp := ses.Get("http://httpbin.org/get?page[]=1&page[]=2&page[]=3&name=xiaoming")
 	p = tp.QueryParam("page[]")
@@ -164,3 +165,46 @@ func TestQueryArrayParam(t *testing.T) {
 	}
 
 }
+
+func TestParamPath(t *testing.T) {
+
+	ses := NewSession()
+	surl := "https://api.xxx.tv/oversea/xxx/api/v2/liveRoom/Page-1-30-/HK/1028/1000"
+	tp := ses.Get(surl)
+	param := tp.PathParam(`(.+Page-)(\d+)(-)(\d+)(.+)`, 1, 3)
+
+	param.IntAdd(1)
+	purl := tp.GetURLRawPath()
+	if !regexp.MustCompile("Page-2-30").MatchString(purl) {
+		t.Error(purl)
+	}
+
+	param.IntArrayAdd(1, 30)
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile("Page-2-60").MatchString(purl) {
+		t.Error(purl)
+	}
+}
+
+// func Benchmark(b *testing.B) {
+// 	var a []string = []string{"ads", "asfdf", "13123"}
+
+// 	b.Run("+", func(b *testing.B) {
+// 		for i := 0; i < b.N; i++ {
+// 			concat1(a)
+// 		}
+// 	})
+
+// 	b.Run("append", func(b *testing.B) {
+// 		for i := 0; i < b.N; i++ {
+// 			concat2(a)
+// 		}
+// 	})
+
+// 	b.Run("buffer", func(b *testing.B) {
+// 		for i := 0; i < b.N; i++ {
+// 			concat(a)
+// 		}
+// 	})
+
+// }
