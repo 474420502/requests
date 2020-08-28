@@ -3,6 +3,7 @@ module github.com/474420502/requests
 go 1.14
 
 require (
+	github.com/davecgh/go-spew v1.1.0
 	github.com/elazarl/goproxy v0.0.0-20190711103511-473e67f1d7d2
 	github.com/elazarl/goproxy/ext v0.0.0-20190711103511-473e67f1d7d2 // indirect
 	github.com/stretchr/testify v1.4.0 // indirect
