@@ -91,9 +91,9 @@ func TestUploadFile(t *testing.T) {
 			t.Error("file error", string(resp.Content()))
 		}
 
-		if wf.GetBody().ContentType() != "" {
-			t.Error("Body is not Clear")
-		}
+		// if wf.GetBody().ContentType() != "" {
+		// 	t.Error("Body is not Clear")
+		// }
 
 		wf.SetBodyAuto([]string{"tests/learn.js", "tests/json.file"}, TypeFormData)
 
@@ -111,8 +111,6 @@ func TestBoundary(t *testing.T) {
 
 	ses := NewSession()
 	tp := ses.Post("http://httpbin.org/post")
-
-	ses.Config().SetClearBody(false)
 
 	mw := tp.GetBodyMultipart()
 	mw.AddField("key1", "haha")

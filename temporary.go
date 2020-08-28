@@ -253,7 +253,7 @@ func (tp *Temporary) GetBodyMultipart() *MultipartWriter {
 
 // SetBodyAuto 参数设置
 func (tp *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
-
+	tp.Body = NewBody()
 	if params != nil {
 		tp.mwriter = nil
 
@@ -397,7 +397,7 @@ func (tp *Temporary) Execute() (IResponse, error) {
 	}
 
 	if tp.session.Is.isClearBodyEvery {
-		tp.Body = NewBody()
+		// tp.Body = NewBody()
 	}
 
 	return FromHTTPResponse(resp, tp.session.Is.isDecompressNoAccept)

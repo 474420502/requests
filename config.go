@@ -107,16 +107,3 @@ func (cfg *Config) SetTimeout(t interface{}) {
 	}
 
 }
-
-// SetClearBody 设置边界
-func (cfg *Config) SetClearBody(is bool) {
-	cfg.ses.Is.isClearBodyEvery = is
-}
-
-// SetBoundary 设置边界
-// func (cfg *Config) SetBoundary(boundary string) {
-// 	a := bytes.NewBufferString("")
-// 	w := multipart.NewWriter(a)
-// 	w.CreateFormFile()
-// 	*cfg.ses.boundary = boundary
-// }
