@@ -171,7 +171,7 @@ func TestParamPath(t *testing.T) {
 	ses := NewSession()
 	surl := "https://api.xxx.tv/oversea/xxx/api/v2/liveRoom/Page-1-30-/HK/1028/1000"
 	tp := ses.Get(surl)
-	param := tp.PathParam(`(.+Page-)(\d+)(-)(\d+)(.+)`, 1, 3)
+	param := tp.PathParam(`.+Page-(\d+)-(\d+).+`)
 
 	param.IntAdd(1)
 	purl := tp.GetURLRawPath()
@@ -182,6 +182,76 @@ func TestParamPath(t *testing.T) {
 	param.IntArrayAdd(1, 30)
 	purl = tp.GetURLRawPath()
 	if !regexp.MustCompile("Page-2-60").MatchString(purl) {
+		t.Error(purl)
+	}
+
+	param.IntArraySet(0, 4)
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile("Page-4-60").MatchString(purl) {
+		t.Error(purl)
+	}
+
+	param.IntSet(8)
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile("Page-8-60").MatchString(purl) {
+		t.Error(purl)
+	}
+
+	param.IntArrayDo(func(i int, pvalue int64) interface{} {
+		if i == 1 {
+			pvalue += 20
+		}
+		return pvalue
+	})
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile("Page-8-80").MatchString(purl) {
+		t.Error(purl)
+	}
+
+	param.FloatAdd(2)
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile("Page-10-80").MatchString(purl) {
+		t.Error(purl)
+	}
+
+	param.FloatSet(4.5)
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile("Page-4.5-80").MatchString(purl) {
+		t.Error(purl)
+	}
+
+	param.FloatArrayAdd(0, 0.5)
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile("Page-5-80").MatchString(purl) {
+		t.Error(purl)
+	}
+
+	param.FloatArrayDo(func(i int, pvalue float64) interface{} {
+		if i == 0 {
+			pvalue += 2
+		}
+		return pvalue
+	})
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile("Page-7-80").MatchString(purl) {
+		t.Error(purl)
+	}
+
+	param.StringSet("9")
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile("Page-9-80").MatchString(purl) {
+		t.Error(purl)
+	}
+}
+
+func TestParamHost(t *testing.T) {
+	ses := NewSession()
+	surl := "https://10.api.xxx.tv/oversea/xxx/api/v2/liveRoom/Page-1-30-/HK/1028/1000"
+	tp := ses.Get(surl)
+	param := tp.HostParam(`(\d+).api.xx.+`)
+	param.IntAdd(1)
+	purl := tp.GetURLRawPath()
+	if !regexp.MustCompile("11.api").MatchString(purl) {
 		t.Error(purl)
 	}
 }

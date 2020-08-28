@@ -175,17 +175,13 @@ func (tp *Temporary) QueryParam(key string) IParam {
 }
 
 // PathParam Path参数 如果
-func (tp *Temporary) PathParam(regexpGroup string, selected ...int) IParam {
-	pp := &ParamPath{Temp: tp, Key: regexpGroup}
-	result := regexp.MustCompile(regexpGroup).FindAllStringSubmatch(tp.ParsedURL.Path, 1)
-	if len(result) == 0 {
-		panic(" regexp not find the matched")
-	}
+func (tp *Temporary) PathParam(regexpGroup string) IParam {
+	return extractorParam(tp, regexpGroup, tp.ParsedURL.Path)
+}
 
-	pp.Selected = selected
-	pp.Params = result[0][1:]
-
-	return pp
+// HostParam Path参数 如果
+func (tp *Temporary) HostParam(regexpGroup string) IParam {
+	return extractorParam(tp, regexpGroup, tp.ParsedURL.Host)
 }
 
 var regexGetPath = regexp.MustCompile("/[^/]*")
