@@ -169,9 +169,19 @@ func (tp *Temporary) MergeQuery(query url.Values) {
 	tp.ParsedURL.RawQuery = tpquery.Encode()
 }
 
-// QueryParam 设置Query参数
-func (tp *Temporary) QueryParam(key string) *Param {
-	return &Param{Temp: tp, Key: key}
+// QueryParam 设置Query参数 不会返回nil
+func (tp *Temporary) QueryParam(key string) IParam {
+	return &ParamQuery{Temp: tp, Key: key}
+}
+
+// PathParam Path参数 如果
+func (tp *Temporary) PathParam(regexpGroup string) IParam {
+	return extractorParam(tp, regexpGroup, tp.ParsedURL.Path)
+}
+
+// HostParam Path参数 如果
+func (tp *Temporary) HostParam(regexpGroup string) IParam {
+	return extractorParam(tp, regexpGroup, tp.ParsedURL.Host)
 }
 
 var regexGetPath = regexp.MustCompile("/[^/]*")

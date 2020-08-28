@@ -1,0 +1,192 @@
+package requests
+
+import (
+	"bytes"
+	"regexp"
+	"strconv"
+)
+
+// ParamPath 参数
+type ParamRegexp struct {
+	Temp     *Temporary
+	Key      string // 正则的Group
+	Params   []string
+	Selected []int
+}
+
+func extractorParam(tp *Temporary, regexpGroup string, extracted string) *ParamRegexp {
+	pp := &ParamRegexp{Temp: tp, Key: regexpGroup}
+	// result := regexp.MustCompile(regexpGroup).FindAllStringSubmatch(extracted, 1)
+	result := regexp.MustCompile(regexpGroup).FindAllStringSubmatchIndex(extracted, 1)
+
+	if len(result) == 0 {
+		panic(" regexp not find the matched")
+	}
+
+	//  = selected
+	matched := result[0]
+	var cur = 0
+	for i := 2; i < len(matched); i += 2 {
+		start := matched[i]
+		end := matched[i+1]
+
+		tok := extracted[cur:start]
+		if cur != start {
+			pp.Params = append(pp.Params, tok)
+		}
+
+		pp.Params = append(pp.Params, extracted[start:end])
+		pp.Selected = append(pp.Selected, len(pp.Params)-1)
+
+		cur = end
+	}
+
+	if cur < len(extracted) {
+		pp.Params = append(pp.Params, extracted[cur:])
+	}
+
+	return pp
+}
+
+func concat(ss []string) string {
+	buf := &bytes.Buffer{}
+	for _, s := range ss {
+		buf.WriteString(s)
+	}
+	return buf.String()
+}
+
+// IntSet 单个整型参数设置
+func (p *ParamRegexp) IntSet(v int64) error {
+	sel := p.Selected[0]
+	p.Params[sel] = strconv.FormatInt(v, 10)
+	p.Temp.ParsedURL.Path = concat(p.Params)
+	return nil
+}
+
+// IntAdd 单个整型参数计算
+func (p *ParamRegexp) IntAdd(v int64) error {
+	sel := p.Selected[0]
+	pvalue, err := strconv.ParseInt(p.Params[sel], 10, 64)
+	if err != nil {
+		return err
+	}
+	pvalue += v
+	p.Params[sel] = strconv.FormatInt(pvalue, 10)
+	p.Temp.ParsedURL.Path = concat(p.Params)
+	return nil
+}
+
+// IntArraySet 数组整型参数计算
+func (p *ParamRegexp) IntArraySet(index int, v int64) {
+	sel := p.Selected[index]
+	p.Params[sel] = strconv.FormatInt(v, 10)
+	p.Temp.ParsedURL.Path = concat(p.Params)
+}
+
+// IntArrayAdd 数组整型参数计算
+func (p *ParamRegexp) IntArrayAdd(index int, v int64) error {
+	sel := p.Selected[index]
+	pvalue, err := strconv.ParseInt(p.Params[sel], 10, 64)
+	if err != nil {
+		return err
+	}
+	pvalue += v
+	p.Params[sel] = strconv.FormatInt(pvalue, 10)
+	p.Temp.ParsedURL.Path = concat(p.Params)
+	return nil
+}
+
+// IntArrayDo 数组整型参数操作 do i 数组索引 pvalue 数组值 返回值interface{} 如果nil. 则不变
+func (p *ParamRegexp) IntArrayDo(do func(i int, pvalue int64) interface{}) error {
+	for i, index := range p.Selected {
+		v := p.Params[index]
+		pvalue, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return err
+		}
+		rvalue := do(i, pvalue)
+		if rvalue != nil {
+			if err, ok := rvalue.(error); ok {
+				return err
+			}
+			p.Params[index] = strconv.FormatInt(rvalue.(int64), 10)
+		}
+	}
+	p.Temp.ParsedURL.Path = concat(p.Params)
+	return nil
+}
+
+// FloatSet 单个浮点参数设置
+func (p *ParamRegexp) FloatSet(v float64) {
+	sel := p.Selected[0]
+	p.Params[sel] = strconv.FormatFloat(v, 'f', -1, 64)
+	p.Temp.ParsedURL.Path = concat(p.Params)
+}
+
+// FloatAdd 单个浮点参数计算
+func (p *ParamRegexp) FloatAdd(v float64) error {
+	sel := p.Selected[0]
+	pvalue, err := strconv.ParseFloat(p.Params[sel], 64)
+	if err != nil {
+		return err
+	}
+	pvalue += v
+	p.Params[sel] = strconv.FormatFloat(pvalue, 'f', -1, 64)
+	p.Temp.ParsedURL.Path = concat(p.Params)
+	return nil
+}
+
+// FloatArraySet 数组浮点参数设置
+func (p *ParamRegexp) FloatArraySet(index int, v float64) {
+	sel := p.Selected[index]
+	p.Params[sel] = strconv.FormatFloat(v, 'f', -1, 64)
+	p.Temp.ParsedURL.Path = concat(p.Params)
+}
+
+// FloatArrayAdd 数组浮点参数计算
+func (p *ParamRegexp) FloatArrayAdd(index int, v float64) error {
+	sel := p.Selected[index]
+	pvalue, err := strconv.ParseFloat(p.Params[sel], 64)
+	if err != nil {
+		return err
+	}
+	pvalue += v
+	p.Params[sel] = strconv.FormatFloat(pvalue, 'f', -1, 64)
+	p.Temp.ParsedURL.Path = concat(p.Params)
+	return nil
+}
+
+// FloatArrayDo 数组整型参数操作 do i 数组索引 pvalue 数组值 返回值interface{} 如果nil. 则不变
+func (p *ParamRegexp) FloatArrayDo(do func(i int, pvalue float64) interface{}) error {
+	for i, index := range p.Selected {
+		v := p.Params[index]
+		pvalue, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return err
+		}
+		rvalue := do(i, pvalue)
+		if rvalue != nil {
+			if err, ok := rvalue.(error); ok {
+				return err
+			}
+			p.Params[index] = strconv.FormatFloat(rvalue.(float64), 'f', -1, 64)
+		}
+	}
+	p.Temp.ParsedURL.Path = concat(p.Params)
+	return nil
+}
+
+// StringSet 字符串参数设置
+func (p *ParamRegexp) StringSet(v string) {
+	sel := p.Selected[0]
+	p.Params[sel] = v
+	p.Temp.ParsedURL.Path = concat(p.Params)
+}
+
+// StringArraySet 数组字符串参数设置
+func (p *ParamRegexp) StringArraySet(index int, v string) {
+	sel := p.Selected[index]
+	p.Params[sel] = v
+	p.Temp.ParsedURL.Path = concat(p.Params)
+}
