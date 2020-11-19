@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"reflect"
 	"regexp"
 )
 
@@ -349,6 +350,16 @@ func (tp *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 				params = append(params, TypeFormData)
 				tp.Body.SetPrefix(TypeFormData)
 				createMultipart(tp.Body, params)
+			default:
+				if reflect.TypeOf(param).ConvertibleTo(compatibleType) {
+					cparam := reflect.ValueOf(param).Convert(compatibleType)
+					paramjson, err := json.Marshal(cparam.Interface())
+					if err != nil {
+						log.Panic(err)
+					}
+					tp.Body.SetPrefix(TypeJSON)
+					tp.Body.SetIOBody(paramjson)
+				}
 			}
 		}
 
