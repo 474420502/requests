@@ -164,11 +164,20 @@ func createMultipart(postParams IBody, params []interface{}) {
 			if reflect.TypeOf(param).ConvertibleTo(compatibleType) {
 				cparam := reflect.ValueOf(param).Convert(compatibleType)
 				for k, v := range cparam.Interface().(map[string]interface{}) {
-					data, err := json.Marshal(v)
-					if err != nil {
-						log.Println(err)
-					} else {
-						mwriter.WriteField(k, string(data))
+					switch cv := v.(type) {
+					case string:
+						mwriter.WriteField(k, cv)
+					case []byte:
+						mwriter.WriteField(k, string(cv))
+					case []rune:
+						mwriter.WriteField(k, string(cv))
+					default:
+						data, err := json.Marshal(v)
+						if err != nil {
+							log.Println(err)
+						} else {
+							mwriter.WriteField(k, string(data))
+						}
 					}
 				}
 			}
