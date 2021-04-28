@@ -2,11 +2,13 @@ package requests
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"mime/multipart"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -147,6 +149,36 @@ func createMultipart(postParams IBody, params []interface{}) {
 			for k, vs := range param {
 				for _, v := range vs {
 					mwriter.WriteField(k, v)
+				}
+			}
+		case map[string]interface{}:
+			for k, v := range param {
+				data, err := json.Marshal(v)
+				if err != nil {
+					log.Println(err)
+				} else {
+					mwriter.WriteField(k, string(data))
+				}
+			}
+		default:
+			if reflect.TypeOf(param).ConvertibleTo(compatibleType) {
+				cparam := reflect.ValueOf(param).Convert(compatibleType)
+				for k, v := range cparam.Interface().(map[string]interface{}) {
+					switch cv := v.(type) {
+					case string:
+						mwriter.WriteField(k, cv)
+					case []byte:
+						mwriter.WriteField(k, string(cv))
+					case []rune:
+						mwriter.WriteField(k, string(cv))
+					default:
+						data, err := json.Marshal(v)
+						if err != nil {
+							log.Println(err)
+						} else {
+							mwriter.WriteField(k, string(data))
+						}
+					}
 				}
 			}
 		}

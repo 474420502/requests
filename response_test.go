@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/gin-gonic/gin"
 	"github.com/tidwall/gjson"
 )
 
@@ -92,7 +93,17 @@ func TestReadmeEg1(t *testing.T) {
 	tp = ses.Get("http://httpbin.org/anything")
 	tp.SetBodyAuto(map[string]interface{}{"a": "1", "b": 2})
 	resp, _ = tp.Execute()
-	// log.Println(string(resp.Content()))
+	log.Println(string(resp.Content()))
+
+	tp = ses.Get("http://httpbin.org/anything")
+	tp.SetBodyAuto(gin.H{"a": "1", "b": 2})
+	resp, _ = tp.Execute()
+	log.Println(string(resp.Content()))
+
+	tp = ses.Get("http://httpbin.org/anything")
+	tp.SetBodyAuto(gin.H{"a": "1", "b": 2}, TypeFormData)
+	resp, _ = tp.Execute()
+	log.Println(string(resp.Content()))
 	// {
 	// 	"args": {},
 	// 	"data": "{\"a\":\"1\",\"b\":2}",

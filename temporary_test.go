@@ -415,3 +415,38 @@ func TestTemporary_BodyAutoRawJson(t *testing.T) {
 		t.Error(string(resp.Content()))
 	}
 }
+
+type AutoBodyTest struct {
+	Name string      `json:"name"`
+	Type int         `json:"type"`
+	Info interface{} `json:"info"`
+}
+
+func TestTemporary_BodyAutoStruct(t *testing.T) {
+
+	ses := NewSession()
+
+	wf := ses.Post("http://httpbin.org/post")
+	wf.SetBodyAuto(&AutoBodyTest{Name: "test"})
+	resp, err := wf.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+
+	result := gjson.Get(string(resp.Content()), "json.name").String()
+	if result != "test" {
+		t.Error(string(resp.Content()), result)
+	}
+
+	wf = ses.Post("http://httpbin.org/post")
+	wf.SetBodyAuto(AutoBodyTest{Name: "test"})
+	resp, err = wf.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+
+	result = gjson.Get(string(resp.Content()), "json.name").String()
+	if result != "test" {
+		t.Error(string(resp.Content()), result)
+	}
+}
