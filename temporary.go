@@ -351,15 +351,27 @@ func (tp *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 				tp.Body.SetPrefix(TypeFormData)
 				createMultipart(tp.Body, params)
 			default:
-				if reflect.TypeOf(param).ConvertibleTo(compatibleType) {
-					cparam := reflect.ValueOf(param).Convert(compatibleType)
+
+				pvalue := reflect.ValueOf(param)
+				ptype := reflect.TypeOf(param)
+
+				if ptype.ConvertibleTo(compatibleType) {
+					cparam := pvalue.Convert(compatibleType)
 					paramjson, err := json.Marshal(cparam.Interface())
 					if err != nil {
 						log.Panic(err)
 					}
 					tp.Body.SetPrefix(TypeJSON)
 					tp.Body.SetIOBody(paramjson)
+				} else {
+					paramjson, err := json.Marshal(pvalue.Interface())
+					if err != nil {
+						log.Panic(err)
+					}
+					tp.Body.SetPrefix(TypeJSON)
+					tp.Body.SetIOBody(paramjson)
 				}
+
 			}
 		}
 
