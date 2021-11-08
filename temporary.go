@@ -175,12 +175,12 @@ func (tp *Temporary) QueryParam(key string) IParam {
 	return &ParamQuery{Temp: tp, Key: key}
 }
 
-// PathParam Path参数 如果
+// PathParam Path参数 使用正则匹配路径参数. group为参数 eg. /get?page=1&name=xiaoming
 func (tp *Temporary) PathParam(regexpGroup string) IParam {
 	return extractorParam(tp, regexpGroup, tp.ParsedURL.Path)
 }
 
-// HostParam Path参数 如果
+// HostParam Host参数 使用正则匹配Host参数. group为参数 eg.  httpbin.org
 func (tp *Temporary) HostParam(regexpGroup string) IParam {
 	return extractorParam(tp, regexpGroup, tp.ParsedURL.Host)
 }

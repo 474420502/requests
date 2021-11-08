@@ -73,6 +73,7 @@ func checkParam(tp *Temporary, param string, vaild string) error {
 }
 
 func TestQueryParam(t *testing.T) {
+
 	ses := NewSession()
 	tp := ses.Get("http://httpbin.org/get?page=1&name=xiaoming")
 
@@ -105,6 +106,12 @@ func TestQueryParam(t *testing.T) {
 	p = tp.QueryParam("page")
 	p.FloatSet(1.5)
 	err = checkParam(tp, "page", "1.5")
+	if err != nil {
+		t.Error(err)
+	}
+
+	p.StringSet("5")
+	err = checkParam(tp, "page", "5")
 	if err != nil {
 		t.Error(err)
 	}
@@ -240,6 +247,12 @@ func TestParamPath(t *testing.T) {
 	param.StringSet("9")
 	purl = tp.GetURLRawPath()
 	if !regexp.MustCompile("Page-9-80").MatchString(purl) {
+		t.Error(purl)
+	}
+
+	param.StringArraySet(1, "123")
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile("Page-9-123").MatchString(purl) {
 		t.Error(purl)
 	}
 }

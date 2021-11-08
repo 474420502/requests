@@ -450,11 +450,19 @@ func TestSession_ConfigEx(t *testing.T) {
 		t.Error(err)
 	}
 
+	if !regexp.MustCompile("eson=bad").Match(resp.Content()) {
+		t.Error(string(resp.Content()))
+	}
+
 	ses.DelCookies(u, "eson")
 	resp, err = ses.Get("http://httpbin.org/cookies").Execute()
 	if err != nil {
 		t.Error(err)
 	}
+	if regexp.MustCompile("eson=bad").Match(resp.Content()) {
+		t.Error(string(resp.Content()))
+	}
+
 	cookies := ses.GetCookies(u)
 	if len(cookies) != 1 && cookies[0].String() != "Request=Cookiejar" {
 		t.Error("cookies del get error please check it")
@@ -487,8 +495,7 @@ func TestSession_SetQuery(t *testing.T) {
 
 func TestSession_SetHeader(t *testing.T) {
 	ses := NewSession()
-	var header http.Header
-	header = make(http.Header)
+	var header http.Header = make(http.Header)
 	header["xx-xx"] = []string{"Header"}
 	ses.SetHeader(header)
 
@@ -501,7 +508,8 @@ func TestSession_SetHeader(t *testing.T) {
 		t.Error("Xx-Xx is not exists", string(resp.Content()))
 	}
 
-	if ses.GetHeader()["xx-xx"][0] != "Header" {
+	var m = map[string][]string(ses.GetHeader())
+	if m["xx-xx"][0] != "Header" {
 		t.Error("header error")
 	}
 }

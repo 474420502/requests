@@ -27,7 +27,7 @@ type Response struct {
 	readResponse *http.Response
 }
 
-// FromHTTPResponse 生成Response 从标准http.Response
+// FromHTTPResponse 生成Response 从标准http.Response. isDecompressNoAccept 自动解压被压缩的数据. 兼容python requests
 func FromHTTPResponse(resp *http.Response, isDecompressNoAccept bool) (*Response, error) {
 	var err error
 	var rbuf []byte

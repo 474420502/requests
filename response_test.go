@@ -5,9 +5,10 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gin-gonic/gin"
 	"github.com/tidwall/gjson"
 )
+
+type H map[string]interface{}
 
 func TestFromHTTPResponse(t *testing.T) {
 
@@ -96,12 +97,12 @@ func TestReadmeEg1(t *testing.T) {
 	log.Println(string(resp.Content()))
 
 	tp = ses.Get("http://httpbin.org/anything")
-	tp.SetBodyAuto(gin.H{"a": "1", "b": 2})
+	tp.SetBodyAuto(H{"a": "1", "b": 2})
 	resp, _ = tp.Execute()
 	log.Println(string(resp.Content()))
 
 	tp = ses.Get("http://httpbin.org/anything")
-	tp.SetBodyAuto(gin.H{"a": "1", "b": 2}, TypeFormData)
+	tp.SetBodyAuto(H{"a": "1", "b": 2}, TypeFormData)
 	resp, _ = tp.Execute()
 	log.Println(string(resp.Content()))
 	// {
@@ -128,24 +129,28 @@ func TestReadmeEg1(t *testing.T) {
 	tp = ses.Post("http://httpbin.org/anything")
 	tp.SetBodyAuto("./tests/learn.js", TypeFormData)
 	resp, _ = tp.Execute()
-	// log.Println(string(resp.Content()))
-	// {
-	// 	"args": {},
-	// 	"data": "",
-	// 	"files": {
-	// 	  "file0": "learn.js\nfdsfsdavxlearnlearnlearnlearn"
-	// 	},
-	// 	"form": {},
-	// 	"headers": {
-	// 	  "Connection": "close",
-	// 	  "Content-Length": "279",
-	// 	  "Content-Type": "multipart/form-data; boundary=1b8ffe52a1241b6caa93af8d5d2c3b6172eb650224ad959c69ea8df7c04d",
-	// 	  "Host": "httpbin.org",
-	// 	  "User-Agent": "Go-http-client/1.1"
-	// 	},
-	// 	"json": null,
-	// 	"method": "POST",
-	// 	"origin": "172.17.0.1",
-	// 	"url": "http://httpbin.org/anything"
-	//   }
+
+	content := `{
+		"args": {},
+		"data": "",
+		"files": {
+		  "file0": "learn.js\nfdsfsdavxlearnlearnlearnlearn"
+		},
+		"form": {},
+		"headers": {
+		  "Connection": "close",
+		  "Content-Length": "279",
+		  "Content-Type": "multipart/form-data; boundary=1b8ffe52a1241b6caa93af8d5d2c3b6172eb650224ad959c69ea8df7c04d",
+		  "Host": "httpbin.org",
+		  "User-Agent": "Go-http-client/1.1"
+		},
+		"json": null,
+		"method": "POST",
+		"origin": "172.17.0.1",
+		"url": "http://httpbin.org/anything"
+	  }`
+	if string(resp.Content()) != content {
+		log.Println(string(resp.Content()))
+	}
+
 }
