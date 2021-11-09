@@ -96,3 +96,71 @@ eg2:
     tp.SetBodyAuto(ufile)
     resp, _ = tp.Execute()
 ```
+
+* Request Url With Change Query 
+* eg3:
+```go
+	ses := requests.NewSession()
+	tp := ses.Get("http://httpbin.org/get?page=1&name=xiaoming")
+	p := tp.QueryParam("page") // get the param of page.
+	p.IntAdd(1) // change page. => page += 1 
+	resp, _ := tp.Execute()
+	log.Println("\n", string(resp.Content()))
+	// {
+	//   "args": {
+	//     "name": "xiaoming", 
+	//     "page": "2"
+	//   }, 
+	//   "headers": {
+	//     "Connection": "close", 
+	//     "Host": "httpbin.org", 
+	//     "User-Agent": "Go-http-client/1.1"
+	//   }, 
+	//   "origin": "172.17.0.1", 
+	//   "url": "http://httpbin.org/get?name=xiaoming&page=2"
+	// }
+
+	p.StringSet("5") // Page String Set. equal to IntSet
+	resp, _ := tp.Execute()
+	log.Println("\n",string(resp.Content()))
+	//{
+	//  "args": {
+	//    "name": "xiaoming", 
+	//    "page": "5"
+	//  }, 
+	//  "headers": {
+	//    "Connection": "close", 
+	//    "Host": "httpbin.org", 
+	//    "User-Agent": "Go-http-client/1.1"
+	//  }, 
+	//  "origin": "172.17.0.1", 
+	//  "url": "http://httpbin.org/get?name=xiaoming&page=5"
+	//}
+``` 
+
+* Request Url With Change the Path By regexp 
+* eg4:
+```go
+	ses := requests.NewSession()
+	surl := "http://httpbin.org/anything/Page-1-30/1028/1000"
+	tp := ses.Get(surl)
+	param := tp.PathParam(`.+Page-(\d+)-(\d+).+`)
+	param.IntAdd(1) // equal to IntArraySet(0, 2)
+	resp, _ := tp.Execute()
+	log.Println("\n", string(resp.Content())) // Page-2-30
+	// {
+	//   "args": {}, 
+	//   "data": "", 
+	//   "files": {}, 
+	//   "form": {}, 
+	//   "headers": {
+	//     "Connection": "close", 
+	//     "Host": "httpbin.org", 
+	//     "User-Agent": "Go-http-client/1.1"
+	//   }, 
+	//   "json": null, 
+	//   "method": "GET", 
+	//   "origin": "172.17.0.1", 
+	//   "url": "http://httpbin.org/anything/Page-2-30/1028/1000"
+	// }
+``` 
