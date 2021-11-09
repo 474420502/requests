@@ -147,7 +147,7 @@ const (
 	HeaderKeyContentType = "Content-Type"
 )
 
-// TypeConfig 配置类型
+// TypeConfig config type 配置类型
 type TypeConfig int
 
 const (

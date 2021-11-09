@@ -1,8 +1,8 @@
 package requests
 
 import (
+	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -78,7 +78,7 @@ func UploadFileFromGlob(glob string) ([]*UploadFile, error) {
 	}
 
 	if len(files) == 0 {
-		log.Println("UploadFileFromGlob: len(files) == 0")
+		return nil, fmt.Errorf("UploadFileFromGlob: len(files) == 0")
 	}
 
 	var ufiles []*UploadFile
@@ -90,7 +90,8 @@ func UploadFileFromGlob(glob string) ([]*UploadFile, error) {
 
 		fd, err := os.Open(f)
 		if err != nil {
-			log.Println(fd.Name(), err)
+			// log.Println(fd.Name(), err)
+			return nil, fmt.Errorf("%s error: %s", fd.Name(), err)
 		} else {
 			ufiles = append(ufiles, &UploadFile{FileReaderCloser: fd, FileName: filepath.Base(fd.Name())})
 		}

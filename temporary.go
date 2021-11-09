@@ -128,13 +128,13 @@ func (tp *Temporary) SetParsedURL(u *url.URL) *Temporary {
 	return tp
 }
 
-// GetRawURL 获取url的string形式
+// GetRawURL get url的string形式
 func (tp *Temporary) GetRawURL() string {
 	// u := strings.Split(wf.ParsedURL.String(), "?")[0] + "?" + wf.GetCombineQuery().Encode()
 	return tp.ParsedURL.String()
 }
 
-// SetRawURL 设置 url
+// SetRawURL set url
 func (tp *Temporary) SetRawURL(srcURL string) *Temporary {
 	purl, err := url.ParseRequestURI(srcURL)
 	if err != nil {
@@ -144,12 +144,12 @@ func (tp *Temporary) SetRawURL(srcURL string) *Temporary {
 	return tp
 }
 
-// GetQuery 获取Query参数
+// GetQuery get Query params
 func (tp *Temporary) GetQuery() url.Values {
 	return tp.ParsedURL.Query()
 }
 
-// SetQuery 设置Query参数
+// SetQuery set Query params
 func (tp *Temporary) SetQuery(query url.Values) *Temporary {
 	if query == nil {
 		return tp
@@ -170,24 +170,24 @@ func (tp *Temporary) MergeQuery(query url.Values) {
 	tp.ParsedURL.RawQuery = tpquery.Encode()
 }
 
-// QueryParam 设置Query参数 不会返回nil
+// QueryParam Get the Interface of Query Param. never return nil. 不会返回nil
 func (tp *Temporary) QueryParam(key string) IParam {
 	return &ParamQuery{Temp: tp, Key: key}
 }
 
-// PathParam Path参数 使用正则匹配路径参数. group为参数 eg. /get?page=1&name=xiaoming
+// PathParam Path param 使用正则匹配路径参数. group为参数 eg. /get?page=1&name=xiaoming
 func (tp *Temporary) PathParam(regexpGroup string) IParam {
 	return extractorParam(tp, regexpGroup, tp.ParsedURL.Path)
 }
 
-// HostParam Host参数 使用正则匹配Host参数. group为参数 eg.  httpbin.org
+// HostParam Host param 使用正则匹配Host参数. group为参数 eg.  httpbin.org
 func (tp *Temporary) HostParam(regexpGroup string) IParam {
 	return extractorParam(tp, regexpGroup, tp.ParsedURL.Host)
 }
 
 var regexGetPath = regexp.MustCompile("/[^/]*")
 
-// GetURLPath 获取Path参数 http://localhost/anything/user/pwd return [/anything /user /pwd]
+// GetURLPath get Path param eg: http://localhost/anything/user/pwd return [/anything /user /pwd]
 func (tp *Temporary) GetURLPath() []string {
 	return regexGetPath.FindAllString(tp.ParsedURL.Path, -1)
 }
