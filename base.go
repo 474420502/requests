@@ -27,6 +27,9 @@ func buildBodyRequest(tp *Temporary) *http.Request {
 
 	if tp.Body.GetIOBody() == nil {
 		req, err = http.NewRequest(tp.Method, tp.GetRawURL(), nil)
+		if err != nil {
+			panic(err)
+		}
 	} else {
 		var bodybuf *bytes.Buffer
 		switch tp.Body.GetIOBody().(type) {
@@ -40,6 +43,9 @@ func buildBodyRequest(tp *Temporary) *http.Request {
 			panic(errors.New("the type is not exist, type is " + reflect.TypeOf(tp.Body.GetIOBody()).String()))
 		}
 		req, err = http.NewRequest(tp.Method, tp.GetRawURL(), bodybuf)
+		if err != nil {
+			panic(err)
+		}
 		// req.ContentLength = int64(bodybuf.Len())
 	}
 

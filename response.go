@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-// IResponse 响应内容包含http.Response 已读
+// IResponse interface Response from Execute()
 type IResponse interface {
 	Content() []byte
 	GetStatus() string
@@ -21,13 +21,13 @@ type IResponse interface {
 	GetResponse() interface{}
 }
 
-// Response 响应内容包含http.Response 已读
+// Response Response from Execute()
 type Response struct {
 	readBytes    []byte
 	readResponse *http.Response
 }
 
-// FromHTTPResponse 生成Response 从标准http.Response. isDecompressNoAccept 自动解压被压缩的数据. 兼容python requests
+// FromHTTPResponse Response . isDecompressNoAccept auto Decompress. like python requests
 func FromHTTPResponse(resp *http.Response, isDecompressNoAccept bool) (*Response, error) {
 	var err error
 	var rbuf []byte
@@ -66,27 +66,27 @@ func FromHTTPResponse(resp *http.Response, isDecompressNoAccept bool) (*Response
 	return &Response{readBytes: rbuf, readResponse: resp}, nil
 }
 
-// ContentString 返回解压后的内容
+// ContentString return string(Content())
 func (gresp *Response) ContentString() string {
 	return string(gresp.readBytes)
 }
 
-// Content 返回解压后的内容Bytes
+// Content return Response Bytes
 func (gresp *Response) Content() []byte {
 	return gresp.readBytes
 }
 
-// GetResponse  获取原生golang http.Response
+// GetResponse  get golang http.Response
 func (gresp *Response) GetResponse() interface{} {
 	return gresp.readResponse
 }
 
-// GetStatus 获取Statue String
+// GetStatus get Statue String
 func (gresp *Response) GetStatus() string {
 	return gresp.readResponse.Status
 }
 
-// GetStatusCode 获取Statue int
+// GetStatusCode  get Statue int
 func (gresp *Response) GetStatusCode() int {
 	return gresp.readResponse.StatusCode
 }
@@ -101,7 +101,7 @@ func (gresp *Response) GetCookie() []*http.Cookie {
 	return gresp.readResponse.Cookies()
 }
 
-// GetContentLength 获取Content的内容长度, 如果存在 IsDecompressNoAccept 可能是压缩级别的长度, 非GetContent长度
+// GetContentLength get Content length, if exists IsDecompressNoAccept, data is the length that compressed.
 func (gresp *Response) GetContentLength() int64 {
 	return gresp.readResponse.ContentLength
 }
