@@ -381,17 +381,22 @@ func (tp *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 
 // setHeaderRequest 设置request的头
 func setHeaderRequest(req *http.Request, wf *Temporary) {
-	var header http.Header
-	if len(wf.Header) != 0 {
-		header = wf.Header
-	} else {
-		header = wf.session.Header
-	}
-	for key, values := range header {
-		for _, v := range values {
-			req.Header.Add(key, v)
+
+	if len(wf.session.Header) != 0 {
+		for key, values := range wf.session.Header {
+			for _, v := range values {
+				req.Header.Add(key, v)
+			}
 		}
 	}
+	if len(wf.Header) != 0 {
+		for key, values := range wf.Header {
+			for _, v := range values {
+				req.Header.Add(key, v)
+			}
+		}
+	}
+
 }
 
 // setHeaderRequest 设置request的临时Cookie, 永久需要在session上设置cookie
