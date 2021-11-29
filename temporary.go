@@ -306,8 +306,6 @@ func (tp *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 						if json.Valid(param) {
 							tp.Body.SetPrefix(TypeJSON)
 							tp.Body.SetIOBody(param)
-						} else {
-							log.Println("SetBodyAuto -- Param is not json, but like json.")
 						}
 						break TOPBYTES
 					default:
