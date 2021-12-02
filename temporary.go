@@ -371,6 +371,7 @@ func setHeaderRequest(req *http.Request, wf *Temporary) {
 	for key, values := range wf.Header {
 		req.Header[key] = values
 	}
+
 }
 
 // setHeaderRequest 设置request的临时Cookie, 永久需要在session上设置cookie
