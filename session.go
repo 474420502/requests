@@ -5,64 +5,9 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"runtime"
-	"strings"
 
 	"golang.org/x/net/publicsuffix"
 )
-
-// Body 相关参数结构
-type Body struct {
-	// Query       map[string][]string
-	ioBody interface{}
-	// prefix ContentType 前缀
-	prefix string
-	// Files       []UploadFile
-	contentTypes map[string]int
-}
-
-// NewBody new body pointer
-func NewBody() *Body {
-	b := &Body{}
-	b.contentTypes = make(map[string]int)
-	return b
-}
-
-// SetIOBody 设置IOBody的值
-func (body *Body) SetIOBody(iobody interface{}) {
-	body.ioBody = iobody
-}
-
-// GetIOBody 获取ioBody值
-func (body *Body) GetIOBody() interface{} {
-	return body.ioBody
-}
-
-// ContentType 获取ContentType
-func (body *Body) ContentType() string {
-	content := body.prefix
-	for kvalue := range body.contentTypes {
-		content += kvalue + "; "
-	}
-	return strings.TrimRight(content, "; ")
-}
-
-// SetPrefix SetPrefix 和 AddContentType的顺序会影响到ContentType()的返回结果
-func (body *Body) SetPrefix(ct string) {
-	body.prefix = strings.TrimRight(ct, "; ") + "; "
-}
-
-// AddContentType 添加 Add Type类型
-func (body *Body) AddContentType(ct string) {
-	for _, v := range strings.Split(ct, ";") {
-		v = strings.Trim(v, " ")
-		if v != "" {
-			if body.prefix != v {
-				body.contentTypes[v] = 1
-			}
-		}
-	}
-
-}
 
 // IBody 相关参数结构
 type IBody interface {
