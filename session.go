@@ -163,6 +163,11 @@ func (ses *Session) SetHeader(header http.Header) {
 	ses.Header = header
 }
 
+// AddHeader  添加 Header的值, 必须符合规范 HaHa -> Haha 如果真要HaHa,只能这样 Ha-Ha
+func (ses *Session) AddHeader(key, value string) {
+	ses.Header.Add(key, value)
+}
+
 // GetHeader 获取get Header的值
 func (ses *Session) GetHeader() http.Header {
 	return ses.Header
