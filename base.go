@@ -1,6 +1,7 @@
 package requests
 
 import (
+	"bytes"
 	"net/http"
 )
 
@@ -28,8 +29,7 @@ func buildBodyRequest(tp *Temporary) *http.Request {
 			panic(err)
 		}
 	} else {
-
-		req, err = http.NewRequest(tp.Method, tp.GetRawURL(), tp.Body)
+		req, err = http.NewRequest(tp.Method, tp.GetRawURL(), bytes.NewBuffer(tp.Body.Bytes()))
 		if err != nil {
 			panic(err)
 		}

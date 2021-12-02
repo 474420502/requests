@@ -158,6 +158,11 @@ func (ses *Session) GetQuery() url.Values {
 	return ses.Query
 }
 
+// SetContentType 设置set ContentType
+func (ses *Session) SetContentType(contentType string) {
+	ses.Header.Set(HeaderKeyContentType, contentType)
+}
+
 // SetHeader 设置set Header的值, 必须符合规范 HaHa -> Haha 如果真要HaHa,只能这样 Ha-Ha
 func (ses *Session) SetHeader(header http.Header) {
 	ses.Header = header

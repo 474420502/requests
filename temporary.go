@@ -12,13 +12,14 @@ import (
 	"regexp"
 )
 
-// Temporary 工作流 设计点: 这个并不影响Session的属性变化 如 NewWorkflow(ses, url).AddHeader() 对ses没影响
+// Temporary    这个并不影响Session的属性变化
 type Temporary struct {
 	session *Session
 	// mwriter   *MultipartWriter
+	mwriter   *multipart.Writer
 	ParsedURL *url.URL
 	Method    string
-	Body      io.Reader
+	Body      *bytes.Buffer
 	Header    http.Header
 	Cookies   map[string]*http.Cookie
 }
@@ -32,6 +33,11 @@ func NewTemporary(ses *Session, urlstr string) *Temporary {
 	tp.Header = make(http.Header)
 	tp.Cookies = make(map[string]*http.Cookie)
 	return tp
+}
+
+// SetContentType 设置set ContentType
+func (tp *Temporary) SetContentType(contentType string) {
+	tp.Header.Set(HeaderKeyContentType, contentType)
 }
 
 // AddHeader 添加头信息  Get方法从Header参数上获取 必须符合规范 HaHa -> Haha 如果真要HaHa,只能这样 Ha-Ha
@@ -223,7 +229,12 @@ func (tp *Temporary) SetURLRawPath(path string) *Temporary {
 
 // SetBody 参数设置
 func (tp *Temporary) SetBody(body io.Reader) *Temporary {
-	tp.Body = body
+	var buf = bytes.NewBuffer(nil)
+	_, err := io.Copy(buf, body)
+	if err != nil {
+		panic(err)
+	}
+	tp.Body = buf
 	return tp
 }
 
@@ -236,9 +247,10 @@ func (tp *Temporary) SetBody(body io.Reader) *Temporary {
 // 每次都需要重置
 func (tp *Temporary) CreateBodyMultipart() *multipart.Writer {
 	var buf = &bytes.Buffer{}
-	mwriter := multipart.NewWriter(buf)
+	tp.mwriter = multipart.NewWriter(buf)
+	tp.Header.Set(HeaderKeyContentType, tp.mwriter.FormDataContentType())
 	tp.Body = buf
-	return mwriter
+	return tp.mwriter
 }
 
 // SetBodyAuto 参数设置
@@ -385,7 +397,10 @@ func setTempCookieRequest(req *http.Request, wf *Temporary) {
 
 // Execute 执行. 请求后会清楚Body的内容. 需要重新
 func (tp *Temporary) Execute() (IResponse, error) {
-
+	if tp.mwriter != nil {
+		tp.mwriter.Close()
+		tp.mwriter = nil
+	}
 	req := buildBodyRequest(tp)
 	setHeaderRequest(req, tp)
 	setTempCookieRequest(req, tp)

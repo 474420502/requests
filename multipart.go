@@ -75,7 +75,7 @@ func writeFormUploadFile(mwriter *multipart.Writer, ufile *UploadFile) {
 	}
 }
 
-func createMultipart(params ...interface{}) (io.Reader, *multipart.Writer) {
+func createMultipart(params ...interface{}) (*bytes.Buffer, *multipart.Writer) {
 	plen := len(params)
 
 	body := &bytes.Buffer{}

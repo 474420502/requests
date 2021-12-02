@@ -124,7 +124,12 @@ func TestBoundary(t *testing.T) {
 	mw.WriteField("key2", "xixi")
 
 	// mw.AddField("key2", "xixi")
-
+	// data, err := ioutil.ReadAll(tp.Body)
+	// log.Println(string(data))
+	// if err != nil {
+	// 	t.Error(err)
+	// 	return
+	// }
 	resp, err := tp.Execute()
 	if err != nil {
 		t.Error(err)
@@ -172,7 +177,7 @@ func TestBoundary(t *testing.T) {
 		return
 	}
 
-	if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file0"]; !ok {
+	if _, ok := gjson.Get(string(resp.Content()), "files").Map()["filekey"]; !ok {
 		t.Error("file error", string(resp.Content()))
 	}
 }
