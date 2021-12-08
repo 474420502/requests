@@ -426,7 +426,7 @@ func TestSession_ConfigEx(t *testing.T) {
 		cfg.SetWithCookiejar(false)
 		cfg.SetWithCookiejar(true)
 
-		ses.SetCookies(u, []*http.Cookie{&http.Cookie{Name: "Request", Value: "Cookiejar"}, &http.Cookie{Name: "eson", Value: "bad"}})
+		ses.SetCookies(u, []*http.Cookie{{Name: "Request", Value: "Cookiejar"}, &http.Cookie{Name: "eson", Value: "bad"}})
 		resp, err = ses.Get("http://httpbin.org/get").Execute()
 		if err != nil {
 			t.Error(err)

@@ -9,20 +9,6 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
-// IBody 相关参数结构
-type IBody interface {
-	// GetIOBody  获取iobody data
-	GetIOBody() interface{}
-	// SetIOBody  设置iobody data
-	SetIOBody(iobody interface{})
-	// ContentType      返回包括 Prefix 所有的ContentType
-	ContentType() string
-	// AppendContent
-	AddContentType(ct string)
-	// SetPrefix 设置 Prefix;  唯一前缀; 就是ContentType的第一个, ContentType(Prefix);ContentType;ContentType
-	SetPrefix(ct string)
-}
-
 // BasicAuth 帐号认真结构
 type BasicAuth struct {
 	// User 帐号
@@ -34,14 +20,23 @@ type BasicAuth struct {
 // IsSetting 是否设置的一些情景
 type IsSetting struct {
 	isDecompressNoAccept bool
-	isClearBodyEvery     bool
 }
+
+type CompressType int
+
+const (
+	ContentEncodingNoCompress = 0
+	ContentEncodingGzip       = 1
+	ContentEncodingCompress   = 2
+	ContentEncodingDeflate    = 3
+	ContentEncodingBr         = 4
+)
 
 // Session 的基本方法
 type Session struct {
 	auth *BasicAuth
 
-	// body IBody
+	compressType CompressType
 
 	client    *http.Client
 	cookiejar http.CookieJar
@@ -73,7 +68,7 @@ const (
 	// TypeForm PostForm类型
 	TypeForm = TypeURLENCODED
 
-	// TypeStream application/octet-stream 只能提交一个二进制流, 很少用
+	// TypeStream application/octet-stream 只能提交一个二进制流
 	TypeStream = "application/octet-stream"
 
 	// TypeFormData 类型 Upload File 支持path(string) 自动转换成UploadFile
@@ -140,7 +135,7 @@ func NewSession() *Session {
 	}
 
 	client.Jar = cjar
-	return &Session{client: client, transport: transport, auth: nil, cookiejar: client.Jar, Header: make(http.Header), Is: IsSetting{true, true}}
+	return &Session{client: client, transport: transport, auth: nil, cookiejar: client.Jar, Header: make(http.Header), Is: IsSetting{true}, compressType: ContentEncodingNoCompress}
 }
 
 // Config 配置Reqeusts类集合

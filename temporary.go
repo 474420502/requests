@@ -14,7 +14,8 @@ import (
 
 // Temporary    这个并不影响Session的属性变化
 type Temporary struct {
-	session *Session
+	session      *Session
+	compressType CompressType
 	// mwriter   *MultipartWriter
 	mwriter   *multipart.Writer
 	ParsedURL *url.URL
@@ -24,7 +25,7 @@ type Temporary struct {
 	Cookies   map[string]*http.Cookie
 }
 
-// NewTemporary new and init workflow
+// NewTemporary new and init Temporary
 func NewTemporary(ses *Session, urlstr string) *Temporary {
 	tp := &Temporary{session: ses}
 
@@ -57,9 +58,19 @@ func (tp *Temporary) SetHeader(header http.Header) *Temporary {
 	return tp
 }
 
-// GetHeader 获取Workflow Header
+// GetHeader 获取Temporary Header
 func (tp *Temporary) GetHeader() http.Header {
 	return tp.Header
+}
+
+// SetCompress 设置Temporary Compress
+func (tp *Temporary) SetCompress(c CompressType) {
+	tp.compressType = c
+}
+
+// GetCompress 获取Temporary Compress
+func (tp *Temporary) GetCompress() CompressType {
+	return tp.compressType
 }
 
 // MergeHeader 合并 Header. 并进 Temporary
@@ -235,6 +246,11 @@ func (tp *Temporary) SetBody(body io.Reader) *Temporary {
 		panic(err)
 	}
 	tp.Body = buf
+
+	if tp.Header.Get("Content-Type") == "" {
+		tp.Header.Set("Content-Type", TypeStream)
+	}
+
 	return tp
 }
 

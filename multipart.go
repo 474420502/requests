@@ -75,6 +75,7 @@ func writeFormUploadFile(mwriter *multipart.Writer, ufile *UploadFile) {
 	}
 }
 
+// *multipart.Writer 需要 Close()
 func createMultipart(params ...interface{}) (*bytes.Buffer, *multipart.Writer) {
 	plen := len(params)
 
