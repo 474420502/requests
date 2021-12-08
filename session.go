@@ -5,78 +5,9 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"runtime"
-	"strings"
 
 	"golang.org/x/net/publicsuffix"
 )
-
-// Body 相关参数结构
-type Body struct {
-	// Query       map[string][]string
-	ioBody interface{}
-	// prefix ContentType 前缀
-	prefix string
-	// Files       []UploadFile
-	contentTypes map[string]int
-}
-
-// NewBody new body pointer
-func NewBody() *Body {
-	b := &Body{}
-	b.contentTypes = make(map[string]int)
-	return b
-}
-
-// SetIOBody 设置IOBody的值
-func (body *Body) SetIOBody(iobody interface{}) {
-	body.ioBody = iobody
-}
-
-// GetIOBody 获取ioBody值
-func (body *Body) GetIOBody() interface{} {
-	return body.ioBody
-}
-
-// ContentType 获取ContentType
-func (body *Body) ContentType() string {
-	content := body.prefix
-	for kvalue := range body.contentTypes {
-		content += kvalue + "; "
-	}
-	return strings.TrimRight(content, "; ")
-}
-
-// SetPrefix SetPrefix 和 AddContentType的顺序会影响到ContentType()的返回结果
-func (body *Body) SetPrefix(ct string) {
-	body.prefix = strings.TrimRight(ct, "; ") + "; "
-}
-
-// AddContentType 添加 Add Type类型
-func (body *Body) AddContentType(ct string) {
-	for _, v := range strings.Split(ct, ";") {
-		v = strings.Trim(v, " ")
-		if v != "" {
-			if body.prefix != v {
-				body.contentTypes[v] = 1
-			}
-		}
-	}
-
-}
-
-// IBody 相关参数结构
-type IBody interface {
-	// GetIOBody  获取iobody data
-	GetIOBody() interface{}
-	// SetIOBody  设置iobody data
-	SetIOBody(iobody interface{})
-	// ContentType      返回包括 Prefix 所有的ContentType
-	ContentType() string
-	// AppendContent
-	AddContentType(ct string)
-	// SetPrefix 设置 Prefix;  唯一前缀; 就是ContentType的第一个, ContentType(Prefix);ContentType;ContentType
-	SetPrefix(ct string)
-}
 
 // BasicAuth 帐号认真结构
 type BasicAuth struct {
@@ -89,14 +20,23 @@ type BasicAuth struct {
 // IsSetting 是否设置的一些情景
 type IsSetting struct {
 	isDecompressNoAccept bool
-	isClearBodyEvery     bool
 }
+
+type CompressType int
+
+const (
+	ContentEncodingNoCompress = 0
+	ContentEncodingGzip       = 1
+	ContentEncodingCompress   = 2
+	ContentEncodingDeflate    = 3
+	ContentEncodingBr         = 4
+)
 
 // Session 的基本方法
 type Session struct {
 	auth *BasicAuth
 
-	// body IBody
+	compressType CompressType
 
 	client    *http.Client
 	cookiejar http.CookieJar
@@ -128,7 +68,7 @@ const (
 	// TypeForm PostForm类型
 	TypeForm = TypeURLENCODED
 
-	// TypeStream application/octet-stream 只能提交一个二进制流, 很少用
+	// TypeStream application/octet-stream 只能提交一个二进制流
 	TypeStream = "application/octet-stream"
 
 	// TypeFormData 类型 Upload File 支持path(string) 自动转换成UploadFile
@@ -195,7 +135,7 @@ func NewSession() *Session {
 	}
 
 	client.Jar = cjar
-	return &Session{client: client, transport: transport, auth: nil, cookiejar: client.Jar, Header: make(http.Header), Is: IsSetting{true, true}}
+	return &Session{client: client, transport: transport, auth: nil, cookiejar: client.Jar, Header: make(http.Header), Is: IsSetting{true}, compressType: ContentEncodingNoCompress}
 }
 
 // Config 配置Reqeusts类集合
@@ -213,9 +153,19 @@ func (ses *Session) GetQuery() url.Values {
 	return ses.Query
 }
 
+// SetContentType 设置set ContentType
+func (ses *Session) SetContentType(contentType string) {
+	ses.Header.Set(HeaderKeyContentType, contentType)
+}
+
 // SetHeader 设置set Header的值, 必须符合规范 HaHa -> Haha 如果真要HaHa,只能这样 Ha-Ha
 func (ses *Session) SetHeader(header http.Header) {
 	ses.Header = header
+}
+
+// AddHeader  添加 Header的值, 必须符合规范 HaHa -> Haha 如果真要HaHa,只能这样 Ha-Ha
+func (ses *Session) AddHeader(key, value string) {
+	ses.Header.Add(key, value)
 }
 
 // GetHeader 获取get Header的值

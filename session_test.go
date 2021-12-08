@@ -1,6 +1,7 @@
 package requests
 
 import (
+	"bytes"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -94,11 +95,13 @@ func TestSession_Post(t *testing.T) {
 func TestSession_Setparams(t *testing.T) {
 	type fields struct {
 		client *http.Client
-		params *Body
+		params *bytes.Buffer
 	}
+
 	type args struct {
 		params []interface{}
 	}
+
 	tests := []struct {
 		name    string
 		fields  fields
@@ -118,7 +121,7 @@ func TestSession_Setparams(t *testing.T) {
 		},
 		{
 			name:   "test xml",
-			fields: fields{client: &http.Client{}, params: NewBody()},
+			fields: fields{client: &http.Client{}, params: bytes.NewBuffer(nil)},
 			args:   args{params: []interface{}{`<request><parameters><password>test</password></parameters></request>`, TypeXML}},
 			want:   regexp.MustCompile(`"data": "<request><parameters><password>test</password></parameters></request>"`),
 		},
@@ -423,7 +426,7 @@ func TestSession_ConfigEx(t *testing.T) {
 		cfg.SetWithCookiejar(false)
 		cfg.SetWithCookiejar(true)
 
-		ses.SetCookies(u, []*http.Cookie{&http.Cookie{Name: "Request", Value: "Cookiejar"}, &http.Cookie{Name: "eson", Value: "bad"}})
+		ses.SetCookies(u, []*http.Cookie{{Name: "Request", Value: "Cookiejar"}, &http.Cookie{Name: "eson", Value: "bad"}})
 		resp, err = ses.Get("http://httpbin.org/get").Execute()
 		if err != nil {
 			t.Error(err)

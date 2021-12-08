@@ -89,6 +89,11 @@ func (cfg *Config) SetDecompressNoAccept(is bool) {
 	cfg.ses.Is.isDecompressNoAccept = is
 }
 
+// SetDecompressNoAccept 设置在没头文件情景下, 接受到压缩数据, 是否要解压. 类型python requests
+func (cfg *Config) SetCompress(ct CompressType) {
+	cfg.ses.compressType = ct
+}
+
 // SetConfig 设置配置
 func (cfg *Config) SetTimeout(t interface{}) {
 	switch v := t.(type) {

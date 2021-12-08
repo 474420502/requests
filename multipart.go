@@ -10,58 +10,57 @@ import (
 	"net/url"
 	"reflect"
 	"strconv"
-	"strings"
 )
 
-// MultipartWriter Only Write data. Execute() will with multipart data
-type MultipartWriter struct {
-	fileindex int
-	mwriter   *multipart.Writer
-}
+// // MultipartWriter Only Write data. Execute() will with multipart data
+// type MultipartWriter struct {
+// 	fileindex int
+// 	mwriter   *multipart.Writer
+// }
 
-// SetBoundary overrides the Writer's default randomly-generated boundary separator with an explicit value.
-// SetBoundary must be called before any parts are created, may only contain certain ASCII characters, and must be non-empty and at most 70 bytes long.
-func (mw *MultipartWriter) SetBoundary(boundary string) error {
-	return mw.mwriter.SetBoundary(boundary)
-}
+// // SetBoundary overrides the Writer's default randomly-generated boundary separator with an explicit value.
+// // SetBoundary must be called before any parts are created, may only contain certain ASCII characters, and must be non-empty and at most 70 bytes long.
+// func (mw *MultipartWriter) SetBoundary(boundary string) error {
+// 	return mw.mwriter.SetBoundary(boundary)
+// }
 
-// Boundary returns the Writer's boundary.
-func (mw *MultipartWriter) Boundary() string {
-	return mw.mwriter.Boundary()
-}
+// // Boundary returns the Writer's boundary.
+// func (mw *MultipartWriter) Boundary() string {
+// 	return mw.mwriter.Boundary()
+// }
 
-// AddField write name value with boundary
-func (mw *MultipartWriter) AddField(name, value string) error {
-	return mw.mwriter.WriteField(name, value)
-}
+// // AddField write name value with boundary
+// func (mw *MultipartWriter) AddField(name, value string) error {
+// 	return mw.mwriter.WriteField(name, value)
+// }
 
-// AddFile write name value with boundary
-func (mw *MultipartWriter) AddFile(filename string, dataReader io.Reader) error {
-	fn := fmt.Sprintf("file%d", mw.fileindex)
-	w, err := mw.mwriter.CreateFormFile(fn, filename)
-	if err != nil {
-		return err
-	}
-	mw.fileindex++
-	_, err = io.Copy(w, dataReader)
-	if err != nil {
-		return err
-	}
-	return nil
-}
+// // AddFile write name value with boundary
+// func (mw *MultipartWriter) AddFile(filename string, dataReader io.Reader) error {
+// 	fn := fmt.Sprintf("file%d", mw.fileindex)
+// 	w, err := mw.mwriter.CreateFormFile(fn, filename)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	mw.fileindex++
+// 	_, err = io.Copy(w, dataReader)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
 
-// AddFileEx write name value with boundary, fieldname
-func (mw *MultipartWriter) AddFileEx(fieldname string, filename string, dataReader io.Reader) error {
-	w, err := mw.mwriter.CreateFormFile(fieldname, filename)
-	if err != nil {
-		return err
-	}
-	_, err = io.Copy(w, dataReader)
-	if err != nil {
-		return err
-	}
-	return nil
-}
+// // AddFileEx write name value with boundary, fieldname
+// func (mw *MultipartWriter) AddFileEx(fieldname string, filename string, dataReader io.Reader) error {
+// 	w, err := mw.mwriter.CreateFormFile(fieldname, filename)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	_, err = io.Copy(w, dataReader)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
 
 func writeFormUploadFile(mwriter *multipart.Writer, ufile *UploadFile) {
 	part, err := mwriter.CreateFormFile(ufile.FieldName, ufile.FileName)
@@ -76,22 +75,23 @@ func writeFormUploadFile(mwriter *multipart.Writer, ufile *UploadFile) {
 	}
 }
 
-func createMultipart(postParams IBody, params []interface{}) {
+// *multipart.Writer 需要 Close()
+func createMultipart(params ...interface{}) (*bytes.Buffer, *multipart.Writer) {
 	plen := len(params)
 
 	body := &bytes.Buffer{}
 	mwriter := multipart.NewWriter(body)
 
-	for _, iparam := range params[0 : plen-1] {
+	for i, iparam := range params[0 : plen-1] {
 		switch param := iparam.(type) {
 		case *UploadFile:
 			if param.FieldName == "" {
-				param.FieldName = "file0"
+				param.FieldName = fmt.Sprintf("file%d", i)
 			}
 			writeFormUploadFile(mwriter, param)
 		case UploadFile:
 			if param.FieldName == "" {
-				param.FieldName = "file0"
+				param.FieldName = fmt.Sprintf("file%d", i)
 			}
 			writeFormUploadFile(mwriter, &param)
 		case []*UploadFile:
@@ -184,16 +184,13 @@ func createMultipart(postParams IBody, params []interface{}) {
 		}
 	}
 
-	b := mwriter.Boundary()
-	if strings.ContainsAny(b, `()<>@,;:\"/[]?= `) {
-		b = `"` + b + `"`
-	}
-
-	postParams.AddContentType("boundary=" + b)
-	postParams.SetIOBody(body)
+	// postParams.AddContentType("boundary=" + b)
 
 	err := mwriter.Close()
 	if err != nil {
 		panic(err)
 	}
+
+	// log.Println(string(body.Bytes()))
+	return body, mwriter
 }

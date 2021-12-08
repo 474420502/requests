@@ -3,6 +3,7 @@ package requests
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -11,32 +12,33 @@ import (
 	"regexp"
 )
 
-// Temporary 工作流 设计点: 这个并不影响Session的属性变化 如 NewWorkflow(ses, url).AddHeader() 对ses没影响
+// Temporary    这个并不影响Session的属性变化
 type Temporary struct {
-	session   *Session
-	mwriter   *MultipartWriter
+	session      *Session
+	compressType CompressType
+	// mwriter   *MultipartWriter
+	mwriter   *multipart.Writer
 	ParsedURL *url.URL
 	Method    string
-	Body      IBody
+	Body      *bytes.Buffer
 	Header    http.Header
 	Cookies   map[string]*http.Cookie
 }
 
-// NewTemporary new and init workflow
+// NewTemporary new and init Temporary
 func NewTemporary(ses *Session, urlstr string) *Temporary {
-	tp := &Temporary{}
-	tp.SwitchSession(ses)
+	tp := &Temporary{session: ses}
+
 	tp.SetRawURL(urlstr)
 
-	tp.Body = NewBody()
 	tp.Header = make(http.Header)
 	tp.Cookies = make(map[string]*http.Cookie)
 	return tp
 }
 
-// SwitchSession 替换Session
-func (tp *Temporary) SwitchSession(ses *Session) {
-	tp.session = ses
+// SetContentType 设置set ContentType
+func (tp *Temporary) SetContentType(contentType string) {
+	tp.Header.Set(HeaderKeyContentType, contentType)
 }
 
 // AddHeader 添加头信息  Get方法从Header参数上获取 必须符合规范 HaHa -> Haha 如果真要HaHa,只能这样 Ha-Ha
@@ -50,17 +52,25 @@ func (tp *Temporary) SetHeader(header http.Header) *Temporary {
 	tp.Header = make(http.Header)
 	for k, HValues := range header {
 		var newHValues []string
-		for _, value := range HValues {
-			newHValues = append(newHValues, value)
-		}
+		newHValues = append(newHValues, HValues...)
 		tp.Header[k] = newHValues
 	}
 	return tp
 }
 
-// GetHeader 获取Workflow Header
+// GetHeader 获取Temporary Header
 func (tp *Temporary) GetHeader() http.Header {
 	return tp.Header
+}
+
+// SetCompress 设置Temporary Compress
+func (tp *Temporary) SetCompress(c CompressType) {
+	tp.compressType = c
+}
+
+// GetCompress 获取Temporary Compress
+func (tp *Temporary) GetCompress() CompressType {
+	return tp.compressType
 }
 
 // MergeHeader 合并 Header. 并进 Temporary
@@ -229,54 +239,69 @@ func (tp *Temporary) SetURLRawPath(path string) *Temporary {
 }
 
 // SetBody 参数设置
-func (tp *Temporary) SetBody(body IBody) *Temporary {
-	tp.mwriter = nil
-	tp.Body = body
+func (tp *Temporary) SetBody(body io.Reader) *Temporary {
+	var buf = bytes.NewBuffer(nil)
+	_, err := io.Copy(buf, body)
+	if err != nil {
+		panic(err)
+	}
+	tp.Body = buf
+
+	if tp.Header.Get("Content-Type") == "" {
+		tp.Header.Set("Content-Type", TypeStream)
+	}
+
 	return tp
 }
 
-// GetBody 参数设置
-func (tp *Temporary) GetBody() IBody {
-	return tp.Body
-}
+// // GetBody 参数设置
+// func (tp *Temporary) GetBody() IBody {
+// 	return tp.Body
+// }
 
 // GetBodyMultipart if get multipart, body = NewBody.  使用multipart/form-data. 传递keyvalue. 传递file.
 // 每次都需要重置
-func (tp *Temporary) GetBodyMultipart() *MultipartWriter {
-	mw := &MultipartWriter{}
+func (tp *Temporary) CreateBodyMultipart() *multipart.Writer {
 	var buf = &bytes.Buffer{}
-	mwriter := multipart.NewWriter(buf)
-	tp.Body.SetIOBody(buf)
-	mw.mwriter = mwriter
-	tp.mwriter = mw
-	return mw
+	tp.mwriter = multipart.NewWriter(buf)
+	tp.Header.Set(HeaderKeyContentType, tp.mwriter.FormDataContentType())
+	tp.Body = buf
+	return tp.mwriter
 }
 
 // SetBodyAuto 参数设置
 func (tp *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
-	tp.Body = NewBody()
+
 	if params != nil {
-		tp.mwriter = nil
 
 		plen := len(params)
 		defaultContentType := TypeURLENCODED
+		var mwriter *multipart.Writer
+		defer func() {
+			if mwriter != nil {
+				defaultContentType += ";boundary=" + mwriter.Boundary()
+			}
+			tp.Header.Set(HeaderKeyContentType, defaultContentType)
+		}()
 
 		if plen >= 2 {
 			t := params[plen-1]
 			defaultContentType = t.(string)
 		}
 
-		tp.Body.SetPrefix(defaultContentType)
+		// tp.Body.SetPrefix(defaultContentType)
 
 		switch defaultContentType {
 		case TypeFormData:
-			createMultipart(tp.Body, params) // 还存在 Mixed的可能
+
+			tp.Body, mwriter = createMultipart(params...) // 还存在 Mixed的可能
 		default:
 			var values url.Values
 			switch param := params[0].(type) {
 
 			case string:
 				parambytes := []byte(param)
+				tp.Body = bytes.NewBuffer(parambytes)
 			TOPSTRING:
 				for _, c := range parambytes {
 					switch c {
@@ -284,19 +309,16 @@ func (tp *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 						continue
 					case '[', '{':
 						if json.Valid(parambytes) {
-							tp.Body.SetPrefix(TypeJSON)
-							tp.Body.SetIOBody(parambytes)
-						} else {
-							log.Println("SetBodyAuto -- Param is not json, but like json.\n", string(parambytes))
+							defaultContentType = TypeJSON
 						}
 						break TOPSTRING
 					default:
 						break TOPSTRING
 					}
 				}
-				tp.Body.SetIOBody(parambytes)
-			case []byte:
 
+			case []byte:
+				tp.Body = bytes.NewBuffer(param)
 			TOPBYTES:
 				for _, c := range param {
 					switch c {
@@ -304,71 +326,62 @@ func (tp *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 						continue
 					case '[', '{':
 						if json.Valid(param) {
-							tp.Body.SetPrefix(TypeJSON)
-							tp.Body.SetIOBody(param)
+							defaultContentType = TypeJSON
 						}
 						break TOPBYTES
 					default:
 						break TOPBYTES
 					}
 				}
-				tp.Body.SetIOBody(param)
+
 			case map[string]interface{}, []string, []interface{}:
 				paramjson, err := json.Marshal(param)
 				if err != nil {
 					log.Panic(err)
 				}
-				tp.Body.SetPrefix(TypeJSON)
-				tp.Body.SetIOBody(paramjson)
+				defaultContentType = TypeJSON
+				tp.Body = bytes.NewBuffer(paramjson)
 
 			case map[string]string:
 				values := make(url.Values)
 				for k, v := range param {
 					values.Set(k, v)
 				}
-				tp.Body.SetIOBody([]byte(values.Encode()))
+				tp.Body = bytes.NewBufferString(values.Encode())
 
 			case map[string][]string:
 				values = param
-				tp.Body.SetIOBody([]byte(values.Encode()))
+				tp.Body = bytes.NewBufferString(values.Encode())
 
-			case *UploadFile:
+			case *UploadFile, UploadFile, []*UploadFile, []UploadFile:
 				params = append(params, TypeFormData)
-				tp.Body.SetPrefix(TypeFormData)
-				createMultipart(tp.Body, params)
-			case UploadFile:
-				params = append(params, TypeFormData)
-				tp.Body.SetPrefix(TypeFormData)
-				createMultipart(tp.Body, params)
-			case []*UploadFile:
-				params = append(params, TypeFormData)
-				tp.Body.SetPrefix(TypeFormData)
-				createMultipart(tp.Body, params)
-			case []UploadFile:
-				params = append(params, TypeFormData)
-				tp.Body.SetPrefix(TypeFormData)
-				createMultipart(tp.Body, params)
+				defaultContentType = TypeFormData
+				tp.Body, mwriter = createMultipart(params...)
 			default:
+				var (
+					paramjson []byte
+					err       error
+				)
 
 				pvalue := reflect.ValueOf(param)
 				ptype := reflect.TypeOf(param)
 
 				if ptype.ConvertibleTo(compatibleType) {
 					cparam := pvalue.Convert(compatibleType)
-					paramjson, err := json.Marshal(cparam.Interface())
+					paramjson, err = json.Marshal(cparam.Interface())
 					if err != nil {
 						log.Panic(err)
 					}
-					tp.Body.SetPrefix(TypeJSON)
-					tp.Body.SetIOBody(paramjson)
+
 				} else {
-					paramjson, err := json.Marshal(pvalue.Interface())
+					paramjson, err = json.Marshal(pvalue.Interface())
 					if err != nil {
 						log.Panic(err)
 					}
-					tp.Body.SetPrefix(TypeJSON)
-					tp.Body.SetIOBody(paramjson)
 				}
+
+				defaultContentType = TypeJSON
+				tp.Body = bytes.NewBuffer(paramjson)
 
 			}
 		}
@@ -379,20 +392,12 @@ func (tp *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 
 // setHeaderRequest 设置request的头
 func setHeaderRequest(req *http.Request, wf *Temporary) {
-
-	if len(wf.session.Header) != 0 {
-		for key, values := range wf.session.Header {
-			for _, v := range values {
-				req.Header.Add(key, v)
-			}
-		}
+	for key, values := range wf.session.Header {
+		req.Header[key] = values
 	}
-	if len(wf.Header) != 0 {
-		for key, values := range wf.Header {
-			for _, v := range values {
-				req.Header.Add(key, v)
-			}
-		}
+
+	for key, values := range wf.Header {
+		req.Header[key] = values
 	}
 
 }
@@ -408,7 +413,10 @@ func setTempCookieRequest(req *http.Request, wf *Temporary) {
 
 // Execute 执行. 请求后会清楚Body的内容. 需要重新
 func (tp *Temporary) Execute() (IResponse, error) {
-
+	if tp.mwriter != nil {
+		tp.mwriter.Close()
+		tp.mwriter = nil
+	}
 	req := buildBodyRequest(tp)
 	setHeaderRequest(req, tp)
 	setTempCookieRequest(req, tp)
@@ -420,10 +428,6 @@ func (tp *Temporary) Execute() (IResponse, error) {
 	resp, err := tp.session.client.Do(req)
 	if err != nil {
 		return nil, err
-	}
-
-	if tp.session.Is.isClearBodyEvery {
-		// tp.Body = NewBody()
 	}
 
 	return FromHTTPResponse(resp, tp.session.Is.isDecompressNoAccept)

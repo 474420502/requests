@@ -1,6 +1,7 @@
 package requests
 
 import (
+	"io"
 	"os"
 	"testing"
 
@@ -17,11 +18,16 @@ func TestUploadFile(t *testing.T) {
 		ufile, err := UploadFileFromPath("tests/json.file")
 		if err != nil {
 			t.Error(err)
+			panic("")
 		}
 		wf.SetBodyAuto(ufile, TypeFormData)
-		resp, _ := wf.Execute()
+		resp, err := wf.Execute()
+		if err != nil {
+			panic(err)
+		}
 		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file0"]; !ok {
 			t.Error("file error", string(resp.Content()))
+			panic("")
 		}
 
 		ses = NewSession()
@@ -31,6 +37,7 @@ func TestUploadFile(t *testing.T) {
 		resp, _ = wf.Execute()
 		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file0"]; !ok {
 			t.Error("file error", string(resp.Content()))
+			panic("")
 		}
 
 		ses = NewSession()
@@ -112,11 +119,17 @@ func TestBoundary(t *testing.T) {
 	ses := NewSession()
 	tp := ses.Post("http://httpbin.org/post")
 
-	mw := tp.GetBodyMultipart()
-	mw.AddField("key1", "haha")
-	mw.AddField("key2", "xixi")
-	// mw.AddField("key2", "xixi")
+	mw := tp.CreateBodyMultipart()
+	mw.WriteField("key1", "haha")
+	mw.WriteField("key2", "xixi")
 
+	// mw.AddField("key2", "xixi")
+	// data, err := ioutil.ReadAll(tp.Body)
+	// log.Println(string(data))
+	// if err != nil {
+	// 	t.Error(err)
+	// 	return
+	// }
 	resp, err := tp.Execute()
 	if err != nil {
 		t.Error(err)
@@ -137,15 +150,22 @@ func TestBoundary(t *testing.T) {
 		t.Error("file error", string(resp.Content()))
 	}
 
-	mw = tp.GetBodyMultipart()
-	mw.AddField("key1", "haha")
-	mw.AddField("key2", "xixi")
+	mw = tp.CreateBodyMultipart()
+	mw.WriteField("key1", "haha")
+	mw.WriteField("key2", "xixi")
+
 	f, err := os.Open("./tests/learn.js")
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = mw.AddFile("filekey", f)
+
+	writer, err := mw.CreateFormFile("filekey", "file0")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	_, err = io.Copy(writer, f)
 	if err != nil {
 		t.Error(err)
 		return
@@ -157,7 +177,17 @@ func TestBoundary(t *testing.T) {
 		return
 	}
 
-	if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file0"]; !ok {
+	if _, ok := gjson.Get(string(resp.Content()), "files").Map()["filekey"]; !ok {
 		t.Error("file error", string(resp.Content()))
 	}
+}
+
+func TestCaseCreateMultiPart(t *testing.T) {
+	// ufile, err := UploadFileFromPath("tests/json.file")
+	// if err != nil {
+	// 	t.Error(err)
+	// }
+
+	// createMultipart(ufile, TypeFormData)
+
 }

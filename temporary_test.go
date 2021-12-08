@@ -1,6 +1,7 @@
 package requests
 
 import (
+	"bytes"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -264,9 +265,7 @@ func TestTemporary_Query(t *testing.T) {
 func TestTemporary_Body(t *testing.T) {
 	ses := NewSession()
 	wf := ses.Post("http://httpbin.org/post")
-	body := NewBody()
-	body.SetIOBody("a=1&b=2")
-	wf.SetBody(body)
+	wf.SetBody(bytes.NewBufferString("a=1&b=2"))
 	resp, _ := wf.Execute()
 	form := gjson.Get(string(resp.Content()), "form").Map()
 	if v, ok := form["a"]; ok {
@@ -281,9 +280,8 @@ func TestTemporary_Body(t *testing.T) {
 		}
 	}
 
-	body.SetPrefix(TypeJSON)
-	body.SetIOBody(`{"a": "1",   "b":  "2"}`)
-	wf.SetBody(body)
+	wf.SetContentType(TypeJSON)
+	wf.SetBody(bytes.NewBufferString(`{"a": "1",   "b":  "2"}`))
 	resp, _ = wf.Execute()
 	json := gjson.Get(string(resp.Content()), "json").Map()
 	if v, ok := json["a"]; ok {
