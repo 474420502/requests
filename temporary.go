@@ -275,8 +275,9 @@ func (tp *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 	if params != nil {
 
 		plen := len(params)
-		defaultContentType := TypeURLENCODED
+		var defaultContentType = ""
 		var mwriter *multipart.Writer
+		var err error
 		defer func() {
 			if mwriter != nil {
 				defaultContentType += ";boundary=" + mwriter.Boundary()
@@ -289,12 +290,37 @@ func (tp *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 			defaultContentType = t.(string)
 		}
 
-		// tp.Body.SetPrefix(defaultContentType)
-
 		switch defaultContentType {
 		case TypeFormData:
-
 			tp.Body, mwriter = createMultipart(params...) // 还存在 Mixed的可能
+		case TypeJSON:
+			var jsonbytes []byte
+			switch param := params[0].(type) {
+			case string:
+				jsonbytes = []byte(param)
+			case []byte:
+				jsonbytes = param
+			default:
+				jsonbytes, err = json.Marshal(param)
+				if err != nil {
+					log.Panic(err)
+				}
+			}
+			tp.Body = bytes.NewBuffer(jsonbytes)
+		case TypeForm:
+			fallthrough
+		case TypePlain:
+			fallthrough
+		case TypeStream:
+			switch param := params[0].(type) {
+			case string:
+				parambytes := []byte(param)
+				tp.Body = bytes.NewBuffer(parambytes)
+			case []byte:
+				tp.Body = bytes.NewBuffer(param)
+			case []rune:
+				tp.Body = bytes.NewBuffer([]byte(string(param)))
+			}
 		default:
 			var values url.Values
 			switch param := params[0].(type) {
@@ -302,6 +328,7 @@ func (tp *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 			case string:
 				parambytes := []byte(param)
 				tp.Body = bytes.NewBuffer(parambytes)
+				defaultContentType = TypePlain
 			TOPSTRING:
 				for _, c := range parambytes {
 					switch c {
@@ -316,9 +343,28 @@ func (tp *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 						break TOPSTRING
 					}
 				}
+			case []rune:
+				parambytes := []byte(string(param))
+				tp.Body = bytes.NewBuffer(parambytes)
+				defaultContentType = TypePlain
+			TOPRUNE:
+				for _, c := range parambytes {
+					switch c {
+					case ' ':
+						continue
+					case '[', '{':
+						if json.Valid(parambytes) {
+							defaultContentType = TypeJSON
+						}
+						break TOPRUNE
+					default:
+						break TOPRUNE
+					}
+				}
 
 			case []byte:
 				tp.Body = bytes.NewBuffer(param)
+				defaultContentType = TypeStream
 			TOPBYTES:
 				for _, c := range param {
 					switch c {
@@ -334,25 +380,21 @@ func (tp *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
 					}
 				}
 
-			case map[string]interface{}, []string, []interface{}:
+			case map[string]interface{}, []string, []interface{}, map[string]string:
 				paramjson, err := json.Marshal(param)
 				if err != nil {
 					log.Panic(err)
 				}
 				defaultContentType = TypeJSON
 				tp.Body = bytes.NewBuffer(paramjson)
-
-			case map[string]string:
-				values := make(url.Values)
-				for k, v := range param {
-					values.Set(k, v)
-				}
+			case url.Values:
+				values = param
 				tp.Body = bytes.NewBufferString(values.Encode())
-
+				defaultContentType = TypeForm
 			case map[string][]string:
 				values = param
 				tp.Body = bytes.NewBufferString(values.Encode())
-
+				defaultContentType = TypeForm
 			case *UploadFile, UploadFile, []*UploadFile, []UploadFile:
 				params = append(params, TypeFormData)
 				defaultContentType = TypeFormData

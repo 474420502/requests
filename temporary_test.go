@@ -448,3 +448,80 @@ func TestTemporary_BodyAutoStruct(t *testing.T) {
 		t.Error(string(resp.Content()), result)
 	}
 }
+
+func TestTemporary_BodyAutoValues(t *testing.T) {
+
+	ses := NewSession()
+
+	wf := ses.Post("http://httpbin.org/post")
+	wf.SetBodyAuto(url.Values{
+		"a": {"hello"},
+		"b": {"world"},
+	})
+	resp, err := wf.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+
+	result := gjson.Get(string(resp.Content()), "form.a").String()
+	if result != "hello" {
+
+		t.Error(string(resp.Content()), result)
+	}
+
+	wf = ses.Post("http://httpbin.org/post")
+	wf.SetBodyAuto(map[string][]string{
+		"a": {"hello"},
+		"b": {"world"},
+	})
+	resp, err = wf.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+
+	result = gjson.Get(string(resp.Content()), "form.b").String()
+	if result != "world" {
+		t.Error(string(resp.Content()), result)
+	}
+
+	wf = ses.Post("http://httpbin.org/post")
+	wf.SetBodyAuto(&AutoBodyTest{Name: "test"}, TypeJSON)
+	resp, err = wf.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+
+	result = gjson.Get(string(resp.Content()), "json.name").String()
+	if result != "test" {
+		t.Error(string(resp.Content()), result)
+	}
+
+	wf = ses.Post("http://httpbin.org/post")
+	wf.SetBodyAuto([]byte("123456"), TypeStream)
+	resp, err = wf.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+
+	result = gjson.Get(string(resp.Content()), "data").String()
+	if result != "123456" {
+		t.Error(string(resp.Content()), result)
+	}
+
+	wf = ses.Post("http://httpbin.org/post")
+	wf.SetBodyAuto([]byte("a=1&b=2"), TypeForm)
+	resp, err = wf.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+
+	result = gjson.Get(string(resp.Content()), "form.a").String()
+	if result != "1" {
+		t.Error(string(resp.Content()), result)
+	}
+
+	result = gjson.Get(string(resp.Content()), "form.b").String()
+	if result != "2" {
+		t.Error(string(resp.Content()), result)
+	}
+}

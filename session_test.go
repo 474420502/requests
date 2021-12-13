@@ -69,9 +69,9 @@ func TestSession_Post(t *testing.T) {
 			want: regexp.MustCompile(`"form": \{\}`),
 		},
 		{
-			name: "Post data",
+			name: "Post data stream",
 			args: args{params: []interface{}{[]byte("a=1&b=2")}},
-			want: regexp.MustCompile(`"form": \{[^"]+"a": "1"[^"]+"b": "2"[^\}]+\}`),
+			want: regexp.MustCompile(`"data": "a=1&b=2"`),
 		},
 	}
 	for _, tt := range tests {
@@ -85,7 +85,7 @@ func TestSession_Post(t *testing.T) {
 			}
 
 			if tt.want.MatchString(string(got.Content())) == false {
-				t.Errorf("Metchod = %v, want %v", got, tt.want)
+				t.Errorf("Metchod = %v, want %v", string(got.Content()), tt.want)
 			}
 
 		})
@@ -112,7 +112,7 @@ func TestSession_Setparams(t *testing.T) {
 		{
 			name: "test Setparams",
 			args: args{params: []interface{}{map[string]string{"a": "1", "b": "2"}}},
-			want: regexp.MustCompile(`"form": \{[^"]+"a": "1"[^"]+"b": "2"[^\}]+\}`),
+			want: regexp.MustCompile(`"json": \{[^"]+"a": "1"[^"]+"b": "2"[^\}]+\}`),
 		},
 		{
 			name: "test json",
@@ -137,7 +137,7 @@ func TestSession_Setparams(t *testing.T) {
 			}
 
 			if tt.want.MatchString(string(got.Content())) == false {
-				t.Errorf("Metchod = %v, want %v", got, tt.want)
+				t.Errorf("Metchod = %v, want %v", string(got.Content()), tt.want)
 			}
 		})
 	}
