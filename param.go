@@ -2,7 +2,9 @@ package requests
 
 // IParam Param接口
 type IParam interface {
-	IntSet(v int64) error                                          // param set the value(int64)
+	Set(v interface{})
+	Add(v interface{}) error
+	IntSet(v int64)                                                // param set the value(int64)
 	IntAdd(v int64) error                                          // param add the value(int64)
 	IntArraySet(index int, v int64)                                // params set the values([]int64) by index
 	IntArrayAdd(index int, v int64) error                          // params add the values([]int64) by index

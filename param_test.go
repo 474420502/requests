@@ -6,6 +6,8 @@ import (
 	"log"
 	"regexp"
 	"testing"
+
+	"github.com/474420502/random"
 )
 
 func checkArrayParam(tp *Temporary, param string, vaild string) error {
@@ -266,6 +268,26 @@ func TestParamHost(t *testing.T) {
 	purl := tp.GetURLRawPath()
 	if !regexp.MustCompile("11.api").MatchString(purl) {
 		t.Error(purl)
+	}
+}
+
+func TestFocreParam(t *testing.T) {
+	r := random.New()
+	ses := NewSession()
+	tp := ses.Get("http://httpbin.org/get?page=1&name=xiaoming&p=0.12")
+
+	for i := 0; i < 100; i++ {
+		v := r.Int63()
+
+		ses := NewSession()
+		surl := "https://10.api.xxx.tv/oversea/xxx/api/v2/liveRoom/Page-1-30-/HK/1028/1000"
+		tp := ses.Get(surl)
+		param := tp.HostParam(`(\d+).api.xx.+`)
+
+		purl := tp.GetURLRawPath()
+		if !regexp.MustCompile("11.api").MatchString(purl) {
+			t.Error(purl)
+		}
 	}
 }
 
