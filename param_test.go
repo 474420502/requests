@@ -26,7 +26,7 @@ func checkArrayParam(tp *Temporary, param string, vaild string) error {
 
 	if args, ok := data["args"]; ok {
 		if page, ok := args.(map[string]interface{})[param]; ok {
-			if fmt.Sprint(page) != vaild {
+			if fmt.Sprint(page)[0:len(vaild)] != vaild {
 				log.Println(data, string(resp.Content()))
 				return fmt.Errorf("param: %#v", fmt.Sprint(page))
 			}
@@ -58,16 +58,20 @@ func checkParam(tp *Temporary, param string, vaild string) error {
 
 	if args, ok := data["args"]; ok {
 		if page, ok := args.(map[string]interface{})[param]; ok {
-			if page.(string) != vaild {
-				log.Println(data)
-				return fmt.Errorf("param: %s", param)
+			if len(page.(string)) < len(vaild) {
+				fmt.Errorf("")
+			}
+
+			if page.(string)[0:len(vaild)] != vaild {
+				// log.Println(data)
+				return fmt.Errorf("param(%s): %v != %v", param, page, vaild)
 			}
 		} else {
-			log.Println(data)
+			// log.Println(data)
 			return fmt.Errorf("param is %s not exists", param)
 		}
 	} else {
-		log.Println(data)
+		// log.Println(data)
 		return fmt.Errorf("args is not exists")
 	}
 
@@ -271,24 +275,388 @@ func TestParamHost(t *testing.T) {
 	}
 }
 
+func checkBaseTypeParamSet(tp *Temporary, r *random.Random, t *testing.T) {
+	p := tp.QueryParam("page")
+	var v interface{}
+	var err error
+
+	v = r.Int63()
+	p.Set(v)
+
+	err = checkParam(tp, "page", fmt.Sprintf("%v", v))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = r.Int31()
+	p.Set(v)
+
+	err = checkParam(tp, "page", fmt.Sprintf("%v", v))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = r.Int()
+	p.Set(v)
+
+	err = checkParam(tp, "page", fmt.Sprintf("%v", v))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = (int16)(r.Int())
+	p.Set(v)
+
+	err = checkParam(tp, "page", fmt.Sprintf("%v", v))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = (int8)(r.Int())
+	p.Set(v)
+
+	err = checkParam(tp, "page", fmt.Sprintf("%v", v))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = r.Uint64()
+	p.Set(v)
+
+	err = checkParam(tp, "page", fmt.Sprintf("%v", v))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = r.Uint32()
+	p.Set(v)
+
+	err = checkParam(tp, "page", fmt.Sprintf("%v", v))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = uint(r.Uint64())
+	p.Set(v)
+
+	err = checkParam(tp, "page", fmt.Sprintf("%v", v))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = (uint16)(r.Int())
+	p.Set(v)
+
+	err = checkParam(tp, "page", fmt.Sprintf("%v", v))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = (uint8)(r.Int())
+	p.Set(v)
+
+	err = checkParam(tp, "page", fmt.Sprintf("%v", v))
+	if err != nil {
+		t.Error(err)
+	}
+
+	p = tp.QueryParam("float")
+	v = float64(int(r.Float64()*100000.0)) / 100000.0
+
+	p.Set(v.(float64))
+	err = checkParam(tp, "float", fmt.Sprintf("%v", v))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = float32(int(r.Float32()*1000000)) / 1000000
+	p.Set(v.(float32))
+	checkParam(tp, "float", fmt.Sprintf("%v", float32(int(v.(float32)*10000))/10000))
+
+}
+
+func checkBaseTypeParamAdd(tp *Temporary, r *random.Random, t *testing.T) {
+	p := tp.QueryParam("page")
+	var v interface{}
+	var err error
+	var defaultint64 int64 = 1
+	var defaultint32 int32 = 1
+	var defaultint int = 1
+	var defaultint16 int16 = 1
+	var defaultint8 int8 = 1
+
+	v = r.Int63() >> 2
+	p.Set(defaultint64)
+	p.Add(v)
+
+	err = checkParam(tp, "page", fmt.Sprintf("%v", defaultint64+v.(int64)))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = r.Int31() >> 2
+	p.Set(defaultint32)
+	p.Add(v)
+
+	err = checkParam(tp, "page", fmt.Sprintf("%v", defaultint32+v.(int32)))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = r.Int() >> 2
+	p.Set(defaultint)
+	p.Add(v)
+
+	err = checkParam(tp, "page", fmt.Sprintf("%v", defaultint+v.(int)))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = (int16)(r.Int()) >> 2
+	p.Set(defaultint16)
+	p.Add(v)
+
+	err = checkParam(tp, "page", fmt.Sprintf("%v", defaultint16+v.(int16)))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = (int8)(r.Int()) >> 2
+	p.Set(defaultint8)
+	p.Add(v)
+
+	err = checkParam(tp, "page", fmt.Sprintf("%v", defaultint8+v.(int8)))
+	if err != nil {
+		t.Error(err)
+	}
+
+	var defaultuint64 uint64 = 1
+	var defaultuint32 uint32 = 1
+	var defaultuint uint = 1
+	var defaultuint16 uint16 = 1
+	var defaultuint8 uint8 = 1
+
+	v = r.Uint64() >> 2
+	p.Set(defaultuint64)
+	p.Add(v)
+	err = checkParam(tp, "page", fmt.Sprintf("%v", defaultuint64+v.(uint64)))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = r.Uint32() >> 2
+	p.Set(defaultuint32)
+	p.Add(v)
+	err = checkParam(tp, "page", fmt.Sprintf("%v", defaultuint32+v.(uint32)))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = uint(r.Uint64()) >> 2
+	p.Set(defaultuint)
+	p.Add(v)
+	err = checkParam(tp, "page", fmt.Sprintf("%v", defaultuint+v.(uint)))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = (uint16)(r.Int()) >> 2
+	p.Set(defaultuint16)
+	p.Add(v)
+	err = checkParam(tp, "page", fmt.Sprintf("%v", defaultuint16+v.(uint16)))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = (uint8)(r.Int()) >> 2
+	p.Set(defaultuint8)
+	p.Add(v)
+	err = checkParam(tp, "page", fmt.Sprintf("%v", defaultuint8+v.(uint8)))
+	if err != nil {
+		t.Error(err)
+	}
+
+	var defaultfloat64 float64 = 1
+	var defaultfloat32 float32 = 1
+
+	p = tp.QueryParam("float")
+	v = float64(int(r.Float64()*100000.0)) / 100000.0
+
+	p.Set(defaultfloat64)
+	p.Add(v)
+	err = checkParam(tp, "float", fmt.Sprintf("%v", defaultfloat64+v.(float64)))
+	if err != nil {
+		t.Error(err)
+	}
+
+	v = float32(int(r.Float32()*1000000)) / 1000000
+	p.Set(defaultfloat32)
+	p.Add(v)
+
+	checkParam(tp, "float", fmt.Sprintf("%v", float32(int((1.0+v.(float32))*10000))/10000))
+
+}
+
+// func checkBaseTypeParamArray(tp *Temporary, r *random.Random, t *testing.T) {
+// 	p := tp.QueryParam("pagearr[]")
+// 	var v []interface{}
+// 	var err error
+
+// 	v = nil
+// 	for i := 0; i < 10; i++ {
+// 		v = append(v, r.Int63())
+// 	}
+
+// 	p.Add(v)
+
+// 	err = checkArrayParam(tp, "pagearr[]", fmt.Sprintf("%v", v))
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+
+// 	v = nil
+// 	for i := 0; i < 10; i++ {
+// 		v = append(v, r.Int31())
+// 	}
+// 	p.ArraySet(v)
+
+// 	err = checkArrayParam(tp, "pagearr[]", fmt.Sprintf("%v", v))
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+
+// 	v = nil
+// 	for i := 0; i < 10; i++ {
+// 		v = append(v, r.Int())
+// 	}
+// 	p.ArraySet(v)
+
+// 	err = checkArrayParam(tp, "pagearr[]", fmt.Sprintf("%v", v))
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+
+// 	v = nil
+// 	for i := 0; i < 10; i++ {
+// 		v = append(v, (int16)(r.Int()))
+// 	}
+// 	p.ArraySet(v)
+
+// 	err = checkArrayParam(tp, "pagearr[]", fmt.Sprintf("%v", v))
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+
+// 	v = nil
+// 	for i := 0; i < 10; i++ {
+// 		v = append(v, (int8)(r.Int()))
+// 	}
+// 	p.ArraySet(v)
+
+// 	err = checkArrayParam(tp, "pagearr[]", fmt.Sprintf("%v", v))
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+
+// 	v = nil
+// 	for i := 0; i < 10; i++ {
+// 		v = append(v, r.Uint64())
+// 	}
+// 	p.ArraySet(v)
+
+// 	err = checkArrayParam(tp, "pagearr[]", fmt.Sprintf("%v", v))
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+
+// 	v = nil
+// 	for i := 0; i < 10; i++ {
+// 		v = append(v, r.Uint32())
+// 	}
+// 	p.ArraySet(v)
+
+// 	err = checkArrayParam(tp, "pagearr[]", fmt.Sprintf("%v", v))
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+
+// 	v = nil
+// 	for i := 0; i < 10; i++ {
+// 		v = append(v, uint(r.Uint64()))
+// 	}
+// 	p.ArraySet(v)
+
+// 	err = checkArrayParam(tp, "pagearr[]", fmt.Sprintf("%v", v))
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+
+// 	v = nil
+// 	for i := 0; i < 10; i++ {
+// 		v = append(v, (uint16)(r.Int()))
+// 	}
+// 	p.ArraySet(v)
+
+// 	err = checkArrayParam(tp, "pagearr[]", fmt.Sprintf("%v", v))
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+
+// 	v = nil
+// 	for i := 0; i < 10; i++ {
+// 		v = append(v, (uint8)(r.Int()))
+// 	}
+// 	p.ArraySet(v)
+
+// 	err = checkArrayParam(tp, "pagearr[]", fmt.Sprintf("%v", v))
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+
+// 	p = tp.QueryParam("float")
+// 	v = float64(int(r.Float64()*100000.0)) / 100000.0
+
+// 	v = nil
+// 	for i := 0; i < 10; i++ {
+// 		v = append(v, float64(int(r.Float64()*100000.0))/100000.0)
+// 	}
+// 	p.ArraySet(v.(float64))
+// 	err = checkArrayParam(tp, "float", fmt.Sprintf("%v", v))
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+
+// 	v = float32(int(r.Float32()*1000000)) / 1000000
+// 	p.ArraySet(v.(float32))
+// 	err = checkArrayParam(tp, "float", fmt.Sprintf("%v", float32(int(v.(float32)*10000))/10000))
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
+// }
+
 func TestFocreParam(t *testing.T) {
 	r := random.New()
 	ses := NewSession()
-	tp := ses.Get("http://httpbin.org/get?page=1&name=xiaoming&p=0.12")
+	tp := ses.Get("http://httpbin.org/get?page=1&arrpage[]=1&name=xiaoming&float=0.12")
+
+	err := checkParam(tp, "page", "1")
+	if err != nil {
+		t.Error(err)
+	}
 
 	for i := 0; i < 100; i++ {
-		v := r.Int63()
-
-		ses := NewSession()
-		surl := "https://10.api.xxx.tv/oversea/xxx/api/v2/liveRoom/Page-1-30-/HK/1028/1000"
-		tp := ses.Get(surl)
-		param := tp.HostParam(`(\d+).api.xx.+`)
-
-		purl := tp.GetURLRawPath()
-		if !regexp.MustCompile("11.api").MatchString(purl) {
-			t.Error(purl)
-		}
+		checkBaseTypeParamSet(tp, r, t)
 	}
+
+	tp = ses.Get("http://httpbin.org/get?page=1&arrpage[]=1&name=xiaoming&float=0.12")
+	for i := 0; i < 100; i++ {
+		checkBaseTypeParamAdd(tp, r, t)
+	}
+
+	tp = ses.Get("http://httpbin.org/get?page[]=1&page[]=2&page[]=3&name=xiaoming")
+	p := tp.QueryParam("page[]")
+	p.ArraySet(2, 1)
+	checkArrayParam(tp, "page[]", "[1 2 1]")
 }
 
 // func Benchmark(b *testing.B) {

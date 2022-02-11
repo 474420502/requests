@@ -60,7 +60,6 @@ func concat(ss []string) string {
 func (p *ParamRegexp) Set(value interface{}) {
 
 	sel := p.Selected[0]
-
 	switch v := value.(type) {
 	case int64:
 		p.Params[sel] = strconv.FormatInt(v, 10)
@@ -94,97 +93,226 @@ func (p *ParamRegexp) Set(value interface{}) {
 
 // Add   通用类型 参数加减 value 为通用计算类型
 func (p *ParamRegexp) Add(value interface{}) error {
-	values := p.Temp.GetQuery()
-	vs := values[p.Key]
+
+	sel := p.Selected[0]
 
 	switch v := value.(type) {
 	case int64:
-		pvalue, err := strconv.ParseInt(vs[0], 10, 64)
+		pvalue, err := strconv.ParseInt(p.Params[sel], 10, 64)
 		if err != nil {
 			return err
 		}
 		pvalue += v
-		values.Set(p.Key, strconv.FormatInt(pvalue, 10))
+		p.Params[sel] = strconv.FormatInt(pvalue, 10)
 	case uint64:
-		pvalue, err := strconv.ParseUint(vs[0], 10, 64)
+		pvalue, err := strconv.ParseUint(p.Params[sel], 10, 64)
 		if err != nil {
 			return err
 		}
 		pvalue += v
-		values.Set(p.Key, strconv.FormatUint(pvalue, 10))
+		p.Params[sel] = strconv.FormatUint(pvalue, 10)
 	case float64:
-		pvalue, err := strconv.ParseFloat(vs[0], 10)
+		pvalue, err := strconv.ParseFloat(p.Params[sel], 10)
 		if err != nil {
 			return err
 		}
 		pvalue += v
-		values.Set(p.Key, strconv.FormatFloat(pvalue, 'f', -1, 64))
+		p.Params[sel] = strconv.FormatFloat(pvalue, 'f', -1, 64)
 	case int:
-		pvalue, err := strconv.ParseInt(vs[0], 10, 64)
+		pvalue, err := strconv.ParseInt(p.Params[sel], 10, 64)
 		if err != nil {
 			return err
 		}
 		pvalue += int64(v)
-		values.Set(p.Key, strconv.FormatInt(pvalue, 10))
+		p.Params[sel] = strconv.FormatInt(pvalue, 10)
 	case int8:
-		pvalue, err := strconv.ParseInt(vs[0], 10, 64)
+		pvalue, err := strconv.ParseInt(p.Params[sel], 10, 64)
 		if err != nil {
 			return err
 		}
 		pvalue += int64(v)
-		values.Set(p.Key, strconv.FormatInt(pvalue, 10))
+		p.Params[sel] = strconv.FormatInt(pvalue, 10)
 	case int16:
-		pvalue, err := strconv.ParseInt(vs[0], 10, 64)
+		pvalue, err := strconv.ParseInt(p.Params[sel], 10, 64)
 		if err != nil {
 			return err
 		}
 		pvalue += int64(v)
-		values.Set(p.Key, strconv.FormatInt(pvalue, 10))
+		p.Params[sel] = strconv.FormatInt(pvalue, 10)
 	case int32:
-		pvalue, err := strconv.ParseInt(vs[0], 10, 64)
+		pvalue, err := strconv.ParseInt(p.Params[sel], 10, 64)
 		if err != nil {
 			return err
 		}
 		pvalue += int64(v)
-		values.Set(p.Key, strconv.FormatInt(pvalue, 10))
+		p.Params[sel] = strconv.FormatInt(pvalue, 10)
 	case float32:
-		pvalue, err := strconv.ParseFloat(vs[0], 10)
+		pvalue, err := strconv.ParseFloat(p.Params[sel], 10)
 		if err != nil {
 			return err
 		}
 		pvalue += float64(v)
-		values.Set(p.Key, strconv.FormatFloat(pvalue, 'f', -1, 64))
+		p.Params[sel] = strconv.FormatFloat(pvalue, 'f', -1, 64)
 
 	case uint:
-		pvalue, err := strconv.ParseUint(vs[0], 10, 64)
+		pvalue, err := strconv.ParseUint(p.Params[sel], 10, 64)
 		if err != nil {
 			return err
 		}
 		pvalue += uint64(v)
-		values.Set(p.Key, strconv.FormatUint(pvalue, 10))
+		p.Params[sel] = strconv.FormatUint(pvalue, 10)
 	case uint8:
-		pvalue, err := strconv.ParseUint(vs[0], 10, 64)
+		pvalue, err := strconv.ParseUint(p.Params[sel], 10, 64)
 		if err != nil {
 			return err
 		}
 		pvalue += uint64(v)
-		values.Set(p.Key, strconv.FormatUint(pvalue, 10))
+		p.Params[sel] = strconv.FormatUint(pvalue, 10)
 	case uint16:
-		pvalue, err := strconv.ParseUint(vs[0], 10, 64)
+		pvalue, err := strconv.ParseUint(p.Params[sel], 10, 64)
 		if err != nil {
 			return err
 		}
 		pvalue += uint64(v)
-		values.Set(p.Key, strconv.FormatUint(pvalue, 10))
+		p.Params[sel] = strconv.FormatUint(pvalue, 10)
 	case uint32:
-		pvalue, err := strconv.ParseUint(vs[0], 10, 64)
+		pvalue, err := strconv.ParseUint(p.Params[sel], 10, 64)
 		if err != nil {
 			return err
 		}
 		pvalue += uint64(v)
-		values.Set(p.Key, strconv.FormatUint(pvalue, 10))
+		p.Params[sel] = strconv.FormatUint(pvalue, 10)
 	}
-	p.Temp.SetQuery(values)
+	p.Temp.ParsedURL.Path = concat(p.Params)
+	return nil
+}
+
+// ArraySet 通用数组类型 根据 index 设置 value 为通用计算类型
+func (p *ParamRegexp) ArraySet(index int, value interface{}) {
+	sel := p.Selected[index]
+	switch v := value.(type) {
+	case int64:
+		p.Params[sel] = strconv.FormatInt(v, 10)
+	case uint64:
+		p.Params[sel] = strconv.FormatUint(v, 10)
+	case float64:
+		p.Params[sel] = strconv.FormatFloat(v, 'f', -1, 64)
+	case int:
+		p.Params[sel] = strconv.FormatInt(int64(v), 10)
+	case int8:
+		p.Params[sel] = strconv.FormatInt(int64(v), 10)
+	case int16:
+		p.Params[sel] = strconv.FormatInt(int64(v), 10)
+	case int32:
+		p.Params[sel] = strconv.FormatInt(int64(v), 10)
+	case uint:
+		p.Params[sel] = strconv.FormatUint(uint64(v), 10)
+	case uint8:
+		p.Params[sel] = strconv.FormatUint(uint64(v), 10)
+	case uint16:
+		p.Params[sel] = strconv.FormatUint(uint64(v), 10)
+	case uint32:
+		p.Params[sel] = strconv.FormatUint(uint64(v), 10)
+	case float32:
+		p.Params[sel] = strconv.FormatFloat(float64(v), 'f', -1, 64)
+	case string:
+		p.Params[sel] = v
+	}
+	p.Temp.ParsedURL.Path = concat(p.Params)
+}
+
+// ArrayAdd 通用数组类型 根据 index 参数加减 value 为通用计算类型
+func (p *ParamRegexp) ArrayAdd(index int, value interface{}) error {
+
+	sel := p.Selected[index]
+	switch v := value.(type) {
+	case int64:
+		pvalue, err := strconv.ParseInt(p.Params[sel], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += v
+		p.Params[sel] = strconv.FormatInt(pvalue, 10)
+	case uint64:
+		pvalue, err := strconv.ParseUint(p.Params[sel], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += v
+		p.Params[sel] = strconv.FormatUint(pvalue, 10)
+	case float64:
+		pvalue, err := strconv.ParseFloat(p.Params[sel], 10)
+		if err != nil {
+			return err
+		}
+		pvalue += v
+		p.Params[sel] = strconv.FormatFloat(pvalue, 'f', -1, 64)
+	case int:
+		pvalue, err := strconv.ParseInt(p.Params[sel], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += int64(v)
+		p.Params[sel] = strconv.FormatInt(pvalue, 10)
+	case int8:
+		pvalue, err := strconv.ParseInt(p.Params[sel], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += int64(v)
+		p.Params[sel] = strconv.FormatInt(pvalue, 10)
+	case int16:
+		pvalue, err := strconv.ParseInt(p.Params[sel], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += int64(v)
+		p.Params[sel] = strconv.FormatInt(pvalue, 10)
+	case int32:
+		pvalue, err := strconv.ParseInt(p.Params[sel], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += int64(v)
+		p.Params[sel] = strconv.FormatInt(pvalue, 10)
+	case float32:
+		pvalue, err := strconv.ParseFloat(p.Params[sel], 10)
+		if err != nil {
+			return err
+		}
+		pvalue += float64(v)
+		p.Params[sel] = strconv.FormatFloat(pvalue, 'f', -1, 64)
+
+	case uint:
+		pvalue, err := strconv.ParseUint(p.Params[sel], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += uint64(v)
+		p.Params[sel] = strconv.FormatUint(pvalue, 10)
+	case uint8:
+		pvalue, err := strconv.ParseUint(p.Params[sel], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += uint64(v)
+		p.Params[sel] = strconv.FormatUint(pvalue, 10)
+	case uint16:
+		pvalue, err := strconv.ParseUint(p.Params[sel], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += uint64(v)
+		p.Params[sel] = strconv.FormatUint(pvalue, 10)
+	case uint32:
+		pvalue, err := strconv.ParseUint(p.Params[sel], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += uint64(v)
+		p.Params[sel] = strconv.FormatUint(pvalue, 10)
+	}
+	p.Temp.ParsedURL.Path = concat(p.Params)
 	return nil
 }
 

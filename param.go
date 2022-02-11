@@ -4,6 +4,9 @@ package requests
 type IParam interface {
 	Set(v interface{})
 	Add(v interface{}) error
+	ArraySet(index int, v interface{})
+	ArrayAdd(index int, v interface{}) error
+
 	IntSet(v int64)                                                // param set the value(int64)
 	IntAdd(v int64) error                                          // param add the value(int64)
 	IntArraySet(index int, v int64)                                // params set the values([]int64) by index
