@@ -37,7 +37,7 @@ func (p *ParamQuery) Set(value interface{}) {
 	case uint32:
 		values.Set(p.Key, strconv.FormatUint(uint64(v), 10))
 	case float32:
-		values.Set(p.Key, strconv.FormatFloat(float64(v), 'f', -1, 64))
+		values.Set(p.Key, strconv.FormatFloat(float64(v), 'f', -1, 32))
 	case string:
 		values.Set(p.Key, v)
 	}
@@ -170,7 +170,7 @@ func (p *ParamQuery) ArraySet(index int, value interface{}) {
 	case uint32:
 		vs[index] = strconv.FormatUint(uint64(v), 10)
 	case float32:
-		vs[index] = strconv.FormatFloat(float64(v), 'f', -1, 64)
+		vs[index] = strconv.FormatFloat(float64(v), 'f', -1, 32)
 	case string:
 		vs[index] = v
 	}

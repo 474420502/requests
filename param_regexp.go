@@ -2,6 +2,7 @@ package requests
 
 import (
 	"bytes"
+	"log"
 	"regexp"
 	"strconv"
 )
@@ -20,7 +21,7 @@ func extractorParam(tp *Temporary, regexpGroup string, extracted string) *ParamR
 	result := regexp.MustCompile(regexpGroup).FindAllStringSubmatchIndex(extracted, 1)
 
 	if len(result) == 0 {
-		panic(" regexp not find the matched")
+		log.Panic(" regexp not find the matched: ", extracted)
 	}
 
 	//  = selected
@@ -84,7 +85,7 @@ func (p *ParamRegexp) Set(value interface{}) {
 	case uint32:
 		p.Params[sel] = strconv.FormatUint(uint64(v), 10)
 	case float32:
-		p.Params[sel] = strconv.FormatFloat(float64(v), 'f', -1, 64)
+		p.Params[sel] = strconv.FormatFloat(float64(v), 'f', -1, 32)
 	case string:
 		p.Params[sel] = v
 	}
@@ -152,7 +153,7 @@ func (p *ParamRegexp) Add(value interface{}) error {
 			return err
 		}
 		pvalue += float64(v)
-		p.Params[sel] = strconv.FormatFloat(pvalue, 'f', -1, 64)
+		p.Params[sel] = strconv.FormatFloat(pvalue, 'f', -1, 32)
 
 	case uint:
 		pvalue, err := strconv.ParseUint(p.Params[sel], 10, 64)
@@ -214,7 +215,7 @@ func (p *ParamRegexp) ArraySet(index int, value interface{}) {
 	case uint32:
 		p.Params[sel] = strconv.FormatUint(uint64(v), 10)
 	case float32:
-		p.Params[sel] = strconv.FormatFloat(float64(v), 'f', -1, 64)
+		p.Params[sel] = strconv.FormatFloat(float64(v), 'f', -1, 32)
 	case string:
 		p.Params[sel] = v
 	}
@@ -281,7 +282,7 @@ func (p *ParamRegexp) ArrayAdd(index int, value interface{}) error {
 			return err
 		}
 		pvalue += float64(v)
-		p.Params[sel] = strconv.FormatFloat(pvalue, 'f', -1, 64)
+		p.Params[sel] = strconv.FormatFloat(pvalue, 'f', -1, 32)
 
 	case uint:
 		pvalue, err := strconv.ParseUint(p.Params[sel], 10, 64)
