@@ -10,12 +10,285 @@ type ParamQuery struct {
 	Key  string
 }
 
+// Set 单个整型参数设置
+func (p *ParamQuery) Set(value interface{}) {
+	values := p.Temp.GetQuery()
+	switch v := value.(type) {
+	case int64:
+		values.Set(p.Key, strconv.FormatInt(v, 10))
+	case uint64:
+		values.Set(p.Key, strconv.FormatUint(v, 10))
+	case float64:
+		values.Set(p.Key, strconv.FormatFloat(v, 'f', -1, 64))
+	case int:
+		values.Set(p.Key, strconv.FormatInt(int64(v), 10))
+	case int8:
+		values.Set(p.Key, strconv.FormatInt(int64(v), 10))
+	case int16:
+		values.Set(p.Key, strconv.FormatInt(int64(v), 10))
+	case int32:
+		values.Set(p.Key, strconv.FormatInt(int64(v), 10))
+	case uint:
+		values.Set(p.Key, strconv.FormatUint(uint64(v), 10))
+	case uint8:
+		values.Set(p.Key, strconv.FormatUint(uint64(v), 10))
+	case uint16:
+		values.Set(p.Key, strconv.FormatUint(uint64(v), 10))
+	case uint32:
+		values.Set(p.Key, strconv.FormatUint(uint64(v), 10))
+	case float32:
+		values.Set(p.Key, strconv.FormatFloat(float64(v), 'f', -1, 32))
+	case string:
+		values.Set(p.Key, v)
+	}
+	p.Temp.SetQuery(values)
+}
+
+// Add   通用类型 参数加减 value 为通用计算类型
+func (p *ParamQuery) Add(value interface{}) error {
+	values := p.Temp.GetQuery()
+	vs := values[p.Key]
+
+	switch v := value.(type) {
+	case int64:
+		pvalue, err := strconv.ParseInt(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += v
+		values.Set(p.Key, strconv.FormatInt(pvalue, 10))
+	case uint64:
+		pvalue, err := strconv.ParseUint(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += v
+		values.Set(p.Key, strconv.FormatUint(pvalue, 10))
+	case float64:
+		pvalue, err := strconv.ParseFloat(vs[0], 10)
+		if err != nil {
+			return err
+		}
+		pvalue += v
+		values.Set(p.Key, strconv.FormatFloat(pvalue, 'f', -1, 64))
+	case int:
+		pvalue, err := strconv.ParseInt(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += int64(v)
+		values.Set(p.Key, strconv.FormatInt(pvalue, 10))
+	case int8:
+		pvalue, err := strconv.ParseInt(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += int64(v)
+		values.Set(p.Key, strconv.FormatInt(pvalue, 10))
+	case int16:
+		pvalue, err := strconv.ParseInt(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += int64(v)
+		values.Set(p.Key, strconv.FormatInt(pvalue, 10))
+	case int32:
+		pvalue, err := strconv.ParseInt(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += int64(v)
+		values.Set(p.Key, strconv.FormatInt(pvalue, 10))
+	case float32:
+		pvalue, err := strconv.ParseFloat(vs[0], 10)
+		if err != nil {
+			return err
+		}
+		pvalue += float64(v)
+		values.Set(p.Key, strconv.FormatFloat(pvalue, 'f', -1, 64))
+
+	case uint:
+		pvalue, err := strconv.ParseUint(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += uint64(v)
+		values.Set(p.Key, strconv.FormatUint(pvalue, 10))
+	case uint8:
+		pvalue, err := strconv.ParseUint(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += uint64(v)
+		values.Set(p.Key, strconv.FormatUint(pvalue, 10))
+	case uint16:
+		pvalue, err := strconv.ParseUint(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += uint64(v)
+		values.Set(p.Key, strconv.FormatUint(pvalue, 10))
+	case uint32:
+		pvalue, err := strconv.ParseUint(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += uint64(v)
+		values.Set(p.Key, strconv.FormatUint(pvalue, 10))
+	}
+	p.Temp.SetQuery(values)
+	return nil
+}
+
+// ArraySet 通用数组类型 根据 index 设置 value 为通用计算类型
+func (p *ParamQuery) ArraySet(index int, value interface{}) {
+
+	values := p.Temp.GetQuery()
+	vs := values[p.Key]
+
+	switch v := value.(type) {
+	case int64:
+		vs[index] = strconv.FormatInt(v, 10)
+	case uint64:
+		vs[index] = strconv.FormatUint(v, 10)
+	case float64:
+		vs[index] = strconv.FormatFloat(v, 'f', -1, 64)
+	case int:
+		vs[index] = strconv.FormatInt(int64(v), 10)
+	case int8:
+		vs[index] = strconv.FormatInt(int64(v), 10)
+	case int16:
+		vs[index] = strconv.FormatInt(int64(v), 10)
+	case int32:
+		vs[index] = strconv.FormatInt(int64(v), 10)
+	case uint:
+		vs[index] = strconv.FormatUint(uint64(v), 10)
+	case uint8:
+		vs[index] = strconv.FormatUint(uint64(v), 10)
+	case uint16:
+		vs[index] = strconv.FormatUint(uint64(v), 10)
+	case uint32:
+		vs[index] = strconv.FormatUint(uint64(v), 10)
+	case float32:
+		vs[index] = strconv.FormatFloat(float64(v), 'f', -1, 32)
+	case string:
+		vs[index] = v
+	}
+	p.Temp.SetQuery(values)
+}
+
+// ArrayAdd 通用数组类型 根据 index 参数加减 value 为通用计算类型
+func (p *ParamQuery) ArrayAdd(index int, value interface{}) error {
+	values := p.Temp.GetQuery()
+	vs := values[p.Key]
+
+	switch v := value.(type) {
+	case int64:
+		pvalue, err := strconv.ParseInt(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += v
+		vs[index] = strconv.FormatInt(pvalue, 10)
+
+	case uint64:
+		pvalue, err := strconv.ParseUint(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += v
+		vs[index] = strconv.FormatUint(pvalue, 10)
+
+	case float64:
+		pvalue, err := strconv.ParseFloat(vs[0], 10)
+		if err != nil {
+			return err
+		}
+		pvalue += v
+		vs[index] = strconv.FormatFloat(pvalue, 'f', -1, 64)
+
+	case int:
+		pvalue, err := strconv.ParseInt(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += int64(v)
+		vs[index] = strconv.FormatInt(pvalue, 10)
+
+	case int8:
+		pvalue, err := strconv.ParseInt(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += int64(v)
+		vs[index] = strconv.FormatInt(pvalue, 10)
+
+	case int16:
+		pvalue, err := strconv.ParseInt(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += int64(v)
+		vs[index] = strconv.FormatInt(pvalue, 10)
+
+	case int32:
+		pvalue, err := strconv.ParseInt(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += int64(v)
+		vs[index] = strconv.FormatInt(pvalue, 10)
+
+	case float32:
+		pvalue, err := strconv.ParseFloat(vs[0], 10)
+		if err != nil {
+			return err
+		}
+		pvalue += float64(v)
+		vs[index] = strconv.FormatFloat(pvalue, 'f', -1, 64)
+
+	case uint:
+		pvalue, err := strconv.ParseUint(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += uint64(v)
+		vs[index] = strconv.FormatUint(pvalue, 10)
+
+	case uint8:
+		pvalue, err := strconv.ParseUint(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += uint64(v)
+		vs[index] = strconv.FormatUint(pvalue, 10)
+
+	case uint16:
+		pvalue, err := strconv.ParseUint(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += uint64(v)
+		vs[index] = strconv.FormatUint(pvalue, 10)
+
+	case uint32:
+		pvalue, err := strconv.ParseUint(vs[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		pvalue += uint64(v)
+		vs[index] = strconv.FormatUint(pvalue, 10)
+
+	}
+	p.Temp.SetQuery(values)
+	return nil
+}
+
 // IntSet 单个整型参数设置
-func (p *ParamQuery) IntSet(v int64) error {
+func (p *ParamQuery) IntSet(v int64) {
 	values := p.Temp.GetQuery()
 	values.Set(p.Key, strconv.FormatInt(v, 10))
 	p.Temp.SetQuery(values)
-	return nil
 }
 
 // IntAdd 单个整型参数计算

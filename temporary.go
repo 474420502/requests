@@ -185,7 +185,7 @@ func (tp *Temporary) QueryParam(key string) IParam {
 	return &ParamQuery{Temp: tp, Key: key}
 }
 
-// PathParam Path param 使用正则匹配路径参数. group为参数 eg. /get?page=1&name=xiaoming
+// PathParam Path param 使用正则匹配路径参数.  group为参数 eg. /get?page=1&name=xiaoming 不包含?page=1&name=xiaoming
 func (tp *Temporary) PathParam(regexpGroup string) IParam {
 	return extractorParam(tp, regexpGroup, tp.ParsedURL.Path)
 }
