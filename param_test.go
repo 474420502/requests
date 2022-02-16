@@ -477,6 +477,108 @@ func checkBaseTypeParamRegexpSet(tp *Temporary, r *random.Random, t *testing.T) 
 
 }
 
+func checkBaseTypeParamRegexpArraySet(tp *Temporary, r *random.Random, t *testing.T) {
+	p := tp.PathParam(`Page-([0-9.]+)-([0-9.]+)`)
+	var v interface{}
+
+	var purl string
+
+	v = r.Int63()
+	p.ArraySet(1, v)
+
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, v)).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = r.Int31()
+	p.ArraySet(1, v)
+
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, v)).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = r.Int()
+	p.ArraySet(1, v)
+
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, v)).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = (int16)(r.Int())
+	p.ArraySet(1, v)
+
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, v)).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = (int8)(r.Int())
+	p.ArraySet(1, v)
+
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, v)).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = r.Uint64()
+	p.ArraySet(1, v)
+
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, v)).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = r.Uint32()
+	p.ArraySet(1, v)
+
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, v)).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = uint(r.Uint64())
+	p.ArraySet(1, v)
+
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, v)).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = (uint16)(r.Int())
+	p.ArraySet(1, v)
+
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, v)).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = (uint8)(r.Int())
+	p.ArraySet(1, v)
+
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, v)).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = r.Float64()
+	p.ArraySet(1, v.(float64))
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, v)).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = r.Float32()
+	p.ArraySet(1, v.(float32))
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, v)).MatchString(purl) {
+		t.Error(purl)
+	}
+
+}
+
 func checkBaseTypeParamAdd(tp *Temporary, r *random.Random, t *testing.T) {
 	p := tp.QueryParam("page")
 	var v interface{}
@@ -724,6 +826,131 @@ func checkBaseTypeParamRegexpAdd(tp *Temporary, r *random.Random, t *testing.T) 
 
 }
 
+func checkBaseTypeParamRegexpArrayAdd(tp *Temporary, r *random.Random, t *testing.T) {
+	p := tp.PathParam(`Page-([0-9.]+)-([0-9.]+)`)
+
+	var v interface{}
+
+	var purl string
+	var defaultint64 int64 = 1
+	var defaultint32 int32 = 1
+	var defaultint int = 1
+	var defaultint16 int16 = 1
+	var defaultint8 int8 = 1
+
+	v = r.Int63() >> 2
+	p.ArraySet(1, defaultint64)
+	p.ArrayAdd(1, v)
+
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, defaultint64+v.(int64))).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = r.Int31() >> 2
+	p.ArraySet(1, defaultint32)
+	p.ArrayAdd(1, v)
+
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, defaultint32+v.(int32))).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = r.Int() >> 2
+	p.ArraySet(1, defaultint)
+	p.ArrayAdd(1, v)
+
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, defaultint+v.(int))).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = (int16)(r.Int()) >> 2
+	p.ArraySet(1, defaultint16)
+	p.ArrayAdd(1, v)
+
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, defaultint16+v.(int16))).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = (int8)(r.Int()) >> 2
+	p.ArraySet(1, defaultint8)
+	p.ArrayAdd(1, v)
+
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, defaultint8+v.(int8))).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	var defaultuint64 uint64 = 1
+	var defaultuint32 uint32 = 1
+	var defaultuint uint = 1
+	var defaultuint16 uint16 = 1
+	var defaultuint8 uint8 = 1
+
+	v = r.Uint64() >> 2
+	p.ArraySet(1, defaultuint64)
+	p.ArrayAdd(1, v)
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, defaultuint64+v.(uint64))).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = r.Uint32() >> 2
+	p.ArraySet(1, defaultuint32)
+	p.ArrayAdd(1, v)
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, defaultuint32+v.(uint32))).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = uint(r.Uint64()) >> 2
+	p.ArraySet(1, defaultuint)
+	p.ArrayAdd(1, v)
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, defaultuint+v.(uint))).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = (uint16)(r.Int()) >> 2
+	p.ArraySet(1, defaultuint16)
+	p.ArrayAdd(1, v)
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, defaultuint16+v.(uint16))).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = (uint8)(r.Int()) >> 2
+	p.ArraySet(1, defaultuint8)
+	p.ArrayAdd(1, v)
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, defaultuint8+v.(uint8))).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	var defaultfloat64 float64 = 1
+	var defaultfloat32 float32 = 1
+
+	v = r.Float64()
+
+	p.ArraySet(1, defaultfloat64)
+	p.ArrayAdd(1, v)
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, defaultfloat64+v.(float64))).MatchString(purl) {
+		t.Error(purl)
+	}
+
+	v = r.Float32()
+	p.ArraySet(1, defaultfloat32)
+	p.ArrayAdd(1, v)
+	purl = tp.GetURLRawPath()
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, defaultfloat32+v.(float32))).MatchString(purl) {
+		t.Error(purl)
+	}
+
+}
+
 func TestFocreParamQuery(t *testing.T) {
 	r := random.New()
 	ses := NewSession()
@@ -791,10 +1018,9 @@ func TestFocreParamRegexp(t *testing.T) {
 	// p := tp.PathParam(`Page-(\w+)-(\w+)`)
 	for i := 0; i < 100; i++ {
 		checkBaseTypeParamRegexpSet(tp, r, t)
-	}
-
-	for i := 0; i < 100; i++ {
+		checkBaseTypeParamRegexpArraySet(tp, r, t)
 		checkBaseTypeParamRegexpAdd(tp, r, t)
+		checkBaseTypeParamRegexpArrayAdd(tp, r, t)
 	}
 
 }
