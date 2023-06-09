@@ -5,6 +5,8 @@ import (
 	"net/http"
 )
 
+type M map[string]interface{}
+
 func buildBodyRequest(tp *Temporary) *http.Request {
 	var req *http.Request
 	var err error

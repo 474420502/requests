@@ -3,6 +3,7 @@ package requests
 import (
 	"log"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/tidwall/gjson"
@@ -64,10 +65,10 @@ func TestResponseDeflate(t *testing.T) {
 
 }
 
-func TestReadmeEg1(t *testing.T) {
+func TestReadmeEg1_2(t *testing.T) {
 	ses := NewSession() //requests.NewSession()
 	tp := ses.Get("http://httpbin.org/anything")
-	tp.SetBodyAuto(`{"a": 1, "b": 2}`)
+	tp.SetBodyJson(`{"a": 1, "b": 2}`)
 	resp, _ := tp.Execute()
 	log.Println(string(resp.Content()))
 	// {
@@ -92,17 +93,17 @@ func TestReadmeEg1(t *testing.T) {
 	//   }
 
 	tp = ses.Get("http://httpbin.org/anything")
-	tp.SetBodyAuto(map[string]interface{}{"a": "1", "b": 2})
+	tp.SetBodyJson(map[string]interface{}{"a": "1", "b": 2})
 	resp, _ = tp.Execute()
-	log.Println(string(resp.Content()))
+	log.Println(resp.ContentString())
 
 	tp = ses.Get("http://httpbin.org/anything")
-	tp.SetBodyAuto(H{"a": "1", "b": 2})
+	tp.SetBodyJson(H{"a": "1", "b": 2})
 	resp, _ = tp.Execute()
-	log.Println(string(resp.Content()))
+	log.Println(resp.ContentString())
 
 	tp = ses.Get("http://httpbin.org/anything")
-	tp.SetBodyAuto(H{"a": "1", "b": 2}, TypeFormData)
+	tp.SetBodyFormData(H{"a": "1", "b": 2})
 	resp, _ = tp.Execute()
 	log.Println(string(resp.Content()))
 	// {
@@ -127,30 +128,12 @@ func TestReadmeEg1(t *testing.T) {
 	//   }
 
 	tp = ses.Post("http://httpbin.org/anything")
-	tp.SetBodyAuto("./tests/learn.js", TypeFormData)
+	tp.SetBodyFormData("./tests/learn.js")
 	resp, _ = tp.Execute()
 
-	content := `{
-		"args": {},
-		"data": "",
-		"files": {
-		  "file0": "learn.js\nfdsfsdavxlearnlearnlearnlearn"
-		},
-		"form": {},
-		"headers": {
-		  "Connection": "close",
-		  "Content-Length": "279",
-		  "Content-Type": "multipart/form-data; boundary=1b8ffe52a1241b6caa93af8d5d2c3b6172eb650224ad959c69ea8df7c04d",
-		  "Host": "httpbin.org",
-		  "User-Agent": "Go-http-client/1.1"
-		},
-		"json": null,
-		"method": "POST",
-		"origin": "172.17.0.1",
-		"url": "http://httpbin.org/anything"
-	  }`
-	if string(resp.Content()) != content {
-		log.Println(string(resp.Content()))
+	content := `"file0": "learn.js\nfdsfsdavxlearnlearnlearnlearn"`
+	if !strings.Contains(resp.ContentString(), content) {
+		t.Error(resp.ContentString())
 	}
 
 }

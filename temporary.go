@@ -3,6 +3,7 @@ package requests
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"mime/multipart"
@@ -10,6 +11,7 @@ import (
 	"net/url"
 	"reflect"
 	"regexp"
+	"strconv"
 )
 
 // Temporary    这个并不影响Session的属性变化
@@ -23,6 +25,7 @@ type Temporary struct {
 	Body      *bytes.Buffer
 	Header    http.Header
 	Cookies   map[string]*http.Cookie
+	FloatPrec int // default = 2, if url.Values Contains the type of float, will FormatFloat(,,prec,)
 }
 
 // NewTemporary new and init Temporary
@@ -33,6 +36,7 @@ func NewTemporary(ses *Session, urlstr string) *Temporary {
 
 	tp.Header = make(http.Header)
 	tp.Cookies = make(map[string]*http.Cookie)
+	tp.FloatPrec = 2
 	return tp
 }
 
@@ -267,6 +271,165 @@ func (tp *Temporary) CreateBodyMultipart() *multipart.Writer {
 	tp.Header.Set(HeaderKeyContentType, tp.mwriter.FormDataContentType())
 	tp.Body = buf
 	return tp.mwriter
+}
+
+// SetBodyUrlencoded Body FormData传参数. 推荐url.Values结构
+func (tp *Temporary) SetBodyUrlencoded(params interface{}) *Temporary {
+	tp.Header.Set(HeaderKeyContentType, TypeURLENCODED)
+	if params == nil {
+		tp.Body = nil
+		return tp
+	}
+
+	switch param := params.(type) {
+	case url.Values:
+		tp.Body = bytes.NewBufferString(param.Encode())
+	case map[string][]string:
+		var values url.Values = param
+		tp.Body = bytes.NewBufferString(values.Encode())
+	case map[string]string:
+		var values url.Values = make(url.Values)
+		for k, v := range param {
+			values.Add(k, v)
+		}
+		tp.Body = bytes.NewBufferString(values.Encode())
+	case map[string]int:
+		var values url.Values = make(url.Values)
+		for k, v := range param {
+			values.Add(k, strconv.Itoa(v))
+		}
+		tp.Body = bytes.NewBufferString(values.Encode())
+	case map[string]uint:
+		var values url.Values = make(url.Values)
+		for k, v := range param {
+			values.Add(k, strconv.FormatUint(uint64(v), 10))
+		}
+		tp.Body = bytes.NewBufferString(values.Encode())
+	case map[string]int64:
+		var values url.Values = make(url.Values)
+		for k, v := range param {
+			values.Add(k, strconv.FormatInt(v, 10))
+		}
+		tp.Body = bytes.NewBufferString(values.Encode())
+	case map[string]uint64:
+		var values url.Values = make(url.Values)
+		for k, v := range param {
+			values.Add(k, strconv.FormatUint(v, 10))
+		}
+		tp.Body = bytes.NewBufferString(values.Encode())
+	case map[string]float64:
+		var values url.Values = make(url.Values)
+		for k, v := range param {
+			values.Add(k, strconv.FormatFloat(v, 'f', tp.FloatPrec, 64))
+		}
+		tp.Body = bytes.NewBufferString(values.Encode())
+	case string:
+		tp.Body = bytes.NewBufferString(param)
+	case []byte:
+		tp.Body = bytes.NewBuffer(param)
+	case []rune: // 风险
+		tp.Body = bytes.NewBuffer([]byte(string(param)))
+	default:
+		log.Panic(errors.New("only support [url.Values,map[string][]string],map[string]string,string(a=x&b=c),[]byte,[]rune"))
+	}
+	return tp
+}
+
+// SetBodyFormData Body FormData传参数
+func (tp *Temporary) SetBodyFormData(params ...interface{}) *Temporary {
+	defaultContentType := TypeFormData
+	var mwriter *multipart.Writer
+	tp.Body, mwriter = createMultipartEx(params...)
+	if mwriter != nil {
+		defaultContentType += ";boundary=" + mwriter.Boundary()
+	}
+	tp.Header.Set(HeaderKeyContentType, defaultContentType)
+	return tp
+}
+
+// SetBody Body with type T为类型
+func (tp *Temporary) SetBodyWithType(T string, params interface{}) *Temporary {
+	tp.Header.Set(HeaderKeyContentType, T)
+	if params == nil {
+		tp.Body = nil
+		return tp
+	}
+	switch param := params.(type) {
+	case string:
+		tp.Body = bytes.NewBufferString(param)
+	case []byte:
+		tp.Body = bytes.NewBuffer(param)
+	case []rune: // 风险
+		tp.Body = bytes.NewBuffer([]byte(string(param)))
+	default:
+		log.Panic(errors.New("only support [string(a=x&b=c),[]byte,[]rune"))
+	}
+	return tp
+}
+
+// SetBodyJson Body Json传参数
+func (tp *Temporary) SetBodyJson(params interface{}) *Temporary {
+	tp.Header.Set(HeaderKeyContentType, TypeJSON)
+	if params == nil {
+		tp.Body = nil
+		return tp
+	}
+	switch v := params.(type) {
+	case string:
+		tp.Body = bytes.NewBufferString(v)
+	case []byte:
+		tp.Body = bytes.NewBuffer(v)
+	case []rune: // 可能有风险
+		tp.Body = bytes.NewBuffer([]byte(string(v)))
+	default: // map[string]interface{}, []string, []interface{}, map[string]string:
+		data, err := json.Marshal(v)
+		if err != nil {
+			log.Panic(err)
+		}
+		tp.Body = bytes.NewBuffer(data)
+	}
+
+	return tp
+}
+
+// SetBodyPlain Body Plain传参数
+func (tp *Temporary) SetBodyPlain(params interface{}) *Temporary {
+	tp.Header.Set(HeaderKeyContentType, TypePlain)
+	if params == nil {
+		tp.Body = nil
+		return tp
+	}
+	switch param := params.(type) {
+	case string:
+		tp.Body = bytes.NewBufferString(param)
+	case []byte:
+		tp.Body = bytes.NewBuffer(param)
+	case []rune: // 风险
+		tp.Body = bytes.NewBuffer([]byte(string(param)))
+	default:
+		log.Panic(errors.New("only support [string(a=x&b=c),[]byte,[]rune"))
+	}
+	return tp
+}
+
+// SetBodyStream Body Stream传参数
+func (tp *Temporary) SetBodyStream(params interface{}) *Temporary {
+	tp.Header.Set(HeaderKeyContentType, TypeStream)
+	if params == nil {
+		tp.Body = nil
+		return tp
+	}
+	switch param := params.(type) {
+	case string:
+		tp.Body = bytes.NewBufferString(param)
+	case []byte:
+		tp.Body = bytes.NewBuffer(param)
+	case []rune: // 风险
+		tp.Body = bytes.NewBuffer([]byte(string(param)))
+	default:
+		log.Panic(errors.New("only support [string(a=x&b=c),[]byte,[]rune"))
+	}
+	return tp
 }
 
 // SetBodyAuto 参数设置

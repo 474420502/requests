@@ -53,9 +53,9 @@ func TestSession_Get(t *testing.T) {
 	}
 }
 
-func TestSession_Post(t *testing.T) {
+func TestSession_Post_Urlencoded(t *testing.T) {
 	type args struct {
-		params []interface{}
+		params interface{}
 	}
 
 	tests := []struct {
@@ -69,23 +69,63 @@ func TestSession_Post(t *testing.T) {
 			want: regexp.MustCompile(`"form": \{\}`),
 		},
 		{
-			name: "Post data stream",
-			args: args{params: []interface{}{[]byte("a=1&b=2")}},
-			want: regexp.MustCompile(`"data": "a=1&b=2"`),
+			name: "Post form []byte",
+			args: args{params: []byte("a=1&b=2")},
+			want: regexp.MustCompile(`"form": [^"]+"a": "1",[^"]+"b": "2"[^"]+`),
+		},
+		{
+			name: "Post form string",
+			args: args{params: "a=1&b=3"},
+			want: regexp.MustCompile(`"form": [^"]+"a": "1",[^"]+"b": "3"[^"]+`),
+		},
+
+		{
+			name: "Post form map[string]string",
+			args: args{params: map[string]string{"a": "1", "b": "4"}},
+			want: regexp.MustCompile(`"form": [^"]+"a": "1",[^"]+"b": "4"[^"]+`),
+		},
+
+		{
+			name: "Post form map[string]int",
+			args: args{params: map[string]int{"a": 1, "b": 4}},
+			want: regexp.MustCompile(`"form": [^"]+"a": "1",[^"]+"b": "4"[^"]+`),
+		},
+
+		{
+			name: "Post form map[string]int64",
+			args: args{params: map[string]int64{"a": 1, "b": 4}},
+			want: regexp.MustCompile(`"form": [^"]+"a": "1",[^"]+"b": "4"[^"]+`),
+		},
+		{
+			name: "Post form map[string]uint",
+			args: args{params: map[string]uint{"a": 1, "b": 4}},
+			want: regexp.MustCompile(`"form": [^"]+"a": "1",[^"]+"b": "4"[^"]+`),
+		},
+
+		{
+			name: "Post form map[string]uint64",
+			args: args{params: map[string]uint64{"a": 1, "b": 4}},
+			want: regexp.MustCompile(`"form": [^"]+"a": "1",[^"]+"b": "4"[^"]+`),
+		},
+
+		{
+			name: "Post form map[string]float64",
+			args: args{params: map[string]float64{"a": 1.23, "b": 4.543}},
+			want: regexp.MustCompile(`"form": [^"]+"a": "1.23",[^"]+"b": "4.54"[^"]+`),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ses := NewSession()
-			got, err := ses.Post("http://httpbin.org/post").SetBodyAuto(tt.args.params...).Execute()
+			got, err := ses.Post("http://httpbin.org/post").SetBodyUrlencoded(tt.args.params).Execute()
 
 			if err != nil {
 				t.Errorf("Metchod error = %v", err)
 				return
 			}
-
-			if tt.want.MatchString(string(got.Content())) == false {
-				t.Errorf("Metchod = %v, want %v", string(got.Content()), tt.want)
+			// result := gjson.Parse(got.ContentString())
+			if tt.want.MatchString(got.ContentString()) == false {
+				t.Errorf("Metchod = %v \n want %v", got.ContentString(), tt.want)
 			}
 
 		})
@@ -143,7 +183,7 @@ func TestSession_Setparams(t *testing.T) {
 	}
 }
 
-func TestSession_PostUploadFile(t *testing.T) {
+func TestSession_PostUploadFile_2(t *testing.T) {
 	type args struct {
 		params interface{}
 	}
@@ -172,7 +212,7 @@ func TestSession_PostUploadFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ses := NewSession()
-			got, err := ses.Post("http://httpbin.org/post").SetBodyAuto(tt.args.params, TypeFormData).Execute()
+			got, err := ses.Post("http://httpbin.org/post").SetBodyFormData(tt.args.params).Execute()
 
 			if err != nil {
 				t.Errorf("Metchod error = %v", err)
@@ -216,7 +256,7 @@ func TestSession_Put(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ses := NewSession()
-			got, err := ses.Put("http://httpbin.org/put").SetBodyAuto(tt.args.params, TypeFormData).Execute()
+			got, err := ses.Put("http://httpbin.org/put").SetBodyFormData(tt.args.params).Execute()
 
 			if err != nil {
 				t.Errorf("Metchod error = %v", err)
@@ -260,7 +300,7 @@ func TestSession_Patch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ses := NewSession()
-			got, err := ses.Patch("http://httpbin.org/patch").SetBodyAuto(tt.args.params, TypeFormData).Execute()
+			got, err := ses.Patch("http://httpbin.org/patch").SetBodyFormData(tt.args.params).Execute()
 
 			if err != nil {
 				t.Errorf("Metchod error = %v", err)

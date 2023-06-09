@@ -302,10 +302,10 @@ func TestTemporary_Body(t *testing.T) {
 	// resp, _ = wf.Execute()
 }
 
-func TestTemporary_BodyAutoJsonMap(t *testing.T) {
+func TestTemporary_BodyAutoJsonMap2(t *testing.T) {
 	ses := NewSession()
 	wf := ses.Post("http://httpbin.org/post")
-	wf.SetBodyAuto(map[string]interface{}{"a": 1, "b": map[string]int{"c": 1}})
+	wf.SetBodyJson(map[string]interface{}{"a": 1, "b": map[string]int{"c": 1}})
 	resp, err := wf.Execute()
 	if err != nil {
 		t.Error(err)

@@ -11,6 +11,7 @@ import (
 
 // IResponse interface Response from Execute()
 type IResponse interface {
+	ContentString() string
 	Content() []byte
 	GetStatus() string
 	GetStatusCode() int
