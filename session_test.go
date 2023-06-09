@@ -1,7 +1,6 @@
 package requests
 
 import (
-	"bytes"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -132,55 +131,8 @@ func TestSession_Post_Urlencoded(t *testing.T) {
 	}
 }
 
-func TestSession_Setparams(t *testing.T) {
-	type fields struct {
-		client *http.Client
-		params *bytes.Buffer
-	}
+func TestSession_SetParams(t *testing.T) {
 
-	type args struct {
-		params []interface{}
-	}
-
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *regexp.Regexp
-		wantErr bool
-	}{
-		{
-			name: "test Setparams",
-			args: args{params: []interface{}{map[string]string{"a": "1", "b": "2"}}},
-			want: regexp.MustCompile(`"json": \{[^"]+"a": "1"[^"]+"b": "2"[^\}]+\}`),
-		},
-		{
-			name: "test json",
-			args: args{params: []interface{}{`{"a":"1","b":"2"}`, TypeJSON}},
-			want: regexp.MustCompile(`"json": \{[^"]+"a": "1"[^"]+"b": "2"[^\}]+\}`),
-		},
-		{
-			name:   "test xml",
-			fields: fields{client: &http.Client{}, params: bytes.NewBuffer(nil)},
-			args:   args{params: []interface{}{`<request><parameters><password>test</password></parameters></request>`, TypeXML}},
-			want:   regexp.MustCompile(`"data": "<request><parameters><password>test</password></parameters></request>"`),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ses := NewSession()
-
-			got, err := ses.Post("http://httpbin.org/post").SetBodyAuto(tt.args.params...).Execute()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Metchod error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if tt.want.MatchString(string(got.Content())) == false {
-				t.Errorf("Metchod = %v, want %v", string(got.Content()), tt.want)
-			}
-		})
-	}
 }
 
 func TestSession_PostUploadFile_2(t *testing.T) {

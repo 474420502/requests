@@ -7,12 +7,15 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/tidwall/gjson"
 )
 
 // IResponse interface Response from Execute()
 type IResponse interface {
 	ContentString() string
 	Content() []byte
+	Json() gjson.Result
 	GetStatus() string
 	GetStatusCode() int
 	GetHeader() http.Header
@@ -104,4 +107,9 @@ func (gresp *Response) GetCookie() []*http.Cookie {
 // GetContentLength get Content length, if exists IsDecompressNoAccept, data is the length that compressed.
 func (gresp *Response) GetContentLength() int64 {
 	return gresp.readResponse.ContentLength
+}
+
+// Json  return gjson.Parse(jsonBody)
+func (gresp *Response) Json() gjson.Result {
+	return gjson.ParseBytes(gresp.readBytes)
 }

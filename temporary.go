@@ -9,7 +9,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
-	"reflect"
 	"regexp"
 	"strconv"
 )
@@ -242,7 +241,7 @@ func (tp *Temporary) SetURLRawPath(path string) *Temporary {
 	return tp
 }
 
-// SetBody 参数设置
+// SetBody url body 参数设置
 func (tp *Temporary) SetBody(body io.Reader) *Temporary {
 	var buf = bytes.NewBuffer(nil)
 	_, err := io.Copy(buf, body)
@@ -367,7 +366,7 @@ func (tp *Temporary) SetBodyWithType(T string, params interface{}) *Temporary {
 	return tp
 }
 
-// SetBodyJson Body Json传参数
+// SetBodyJson Body Json传参数. 支持string,[]byte,[]rune,map[string]interface{}, []string, []interface{}, map[string]string,结构体等
 func (tp *Temporary) SetBodyJson(params interface{}) *Temporary {
 	tp.Header.Set(HeaderKeyContentType, TypeJSON)
 	if params == nil {
@@ -428,169 +427,6 @@ func (tp *Temporary) SetBodyStream(params interface{}) *Temporary {
 		tp.Body = bytes.NewBuffer([]byte(string(param)))
 	default:
 		log.Panic(errors.New("only support [string(a=x&b=c),[]byte,[]rune"))
-	}
-	return tp
-}
-
-// SetBodyAuto 参数设置
-func (tp *Temporary) SetBodyAuto(params ...interface{}) *Temporary {
-
-	if params != nil {
-
-		plen := len(params)
-		var defaultContentType = ""
-		var mwriter *multipart.Writer
-		var err error
-		defer func() {
-			if mwriter != nil {
-				defaultContentType += ";boundary=" + mwriter.Boundary()
-			}
-			tp.Header.Set(HeaderKeyContentType, defaultContentType)
-		}()
-
-		if plen >= 2 {
-			t := params[plen-1]
-			defaultContentType = t.(string)
-		}
-
-		switch defaultContentType {
-		case TypeFormData:
-			tp.Body, mwriter = createMultipart(params...) // 还存在 Mixed的可能
-		case TypeJSON:
-			var jsonbytes []byte
-			switch param := params[0].(type) {
-			case string:
-				jsonbytes = []byte(param)
-			case []byte:
-				jsonbytes = param
-			default:
-				jsonbytes, err = json.Marshal(param)
-				if err != nil {
-					log.Panic(err)
-				}
-			}
-			tp.Body = bytes.NewBuffer(jsonbytes)
-		case TypeForm:
-			fallthrough
-		case TypePlain:
-			fallthrough
-		case TypeStream:
-			switch param := params[0].(type) {
-			case string:
-				parambytes := []byte(param)
-				tp.Body = bytes.NewBuffer(parambytes)
-			case []byte:
-				tp.Body = bytes.NewBuffer(param)
-			case []rune:
-				tp.Body = bytes.NewBuffer([]byte(string(param)))
-			}
-		default:
-			var values url.Values
-			switch param := params[0].(type) {
-
-			case string:
-				parambytes := []byte(param)
-				tp.Body = bytes.NewBuffer(parambytes)
-				defaultContentType = TypePlain
-			TOPSTRING:
-				for _, c := range parambytes {
-					switch c {
-					case ' ':
-						continue
-					case '[', '{':
-						if json.Valid(parambytes) {
-							defaultContentType = TypeJSON
-						}
-						break TOPSTRING
-					default:
-						break TOPSTRING
-					}
-				}
-			case []rune:
-				parambytes := []byte(string(param))
-				tp.Body = bytes.NewBuffer(parambytes)
-				defaultContentType = TypePlain
-			TOPRUNE:
-				for _, c := range parambytes {
-					switch c {
-					case ' ':
-						continue
-					case '[', '{':
-						if json.Valid(parambytes) {
-							defaultContentType = TypeJSON
-						}
-						break TOPRUNE
-					default:
-						break TOPRUNE
-					}
-				}
-
-			case []byte:
-				tp.Body = bytes.NewBuffer(param)
-				defaultContentType = TypeStream
-			TOPBYTES:
-				for _, c := range param {
-					switch c {
-					case ' ':
-						continue
-					case '[', '{':
-						if json.Valid(param) {
-							defaultContentType = TypeJSON
-						}
-						break TOPBYTES
-					default:
-						break TOPBYTES
-					}
-				}
-
-			case map[string]interface{}, []string, []interface{}, map[string]string:
-				paramjson, err := json.Marshal(param)
-				if err != nil {
-					log.Panic(err)
-				}
-				defaultContentType = TypeJSON
-				tp.Body = bytes.NewBuffer(paramjson)
-			case url.Values:
-				values = param
-				tp.Body = bytes.NewBufferString(values.Encode())
-				defaultContentType = TypeForm
-			case map[string][]string:
-				values = param
-				tp.Body = bytes.NewBufferString(values.Encode())
-				defaultContentType = TypeForm
-			case *UploadFile, UploadFile, []*UploadFile, []UploadFile:
-				params = append(params, TypeFormData)
-				defaultContentType = TypeFormData
-				tp.Body, mwriter = createMultipart(params...)
-			default:
-				var (
-					paramjson []byte
-					err       error
-				)
-
-				pvalue := reflect.ValueOf(param)
-				ptype := reflect.TypeOf(param)
-
-				if ptype.ConvertibleTo(compatibleType) {
-					cparam := pvalue.Convert(compatibleType)
-					paramjson, err = json.Marshal(cparam.Interface())
-					if err != nil {
-						log.Panic(err)
-					}
-
-				} else {
-					paramjson, err = json.Marshal(pvalue.Interface())
-					if err != nil {
-						log.Panic(err)
-					}
-				}
-
-				defaultContentType = TypeJSON
-				tp.Body = bytes.NewBuffer(paramjson)
-
-			}
-		}
-
 	}
 	return tp
 }

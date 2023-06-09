@@ -2,6 +2,8 @@ package requests
 
 import (
 	"bytes"
+	"encoding/xml"
+	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -320,7 +322,7 @@ func TestTemporary_BodyAutoJsonMap2(t *testing.T) {
 func TestTemporary_BodyAutoJsonList(t *testing.T) {
 	ses := NewSession()
 	wf := ses.Post("http://httpbin.org/post")
-	wf.SetBodyAuto([]interface{}{"a", map[string]interface{}{"b": map[string]int{"c": 1}}})
+	wf.SetBodyJson([]interface{}{"a", map[string]interface{}{"b": map[string]int{"c": 1}}})
 	resp, err := wf.Execute()
 	if err != nil {
 		t.Error(err)
@@ -332,7 +334,7 @@ func TestTemporary_BodyAutoJsonList(t *testing.T) {
 	}
 
 	// wf = ses.Post("http://httpbin.org/post") Temporary 每次执行完都会清除设置.
-	wf.SetBodyAuto([]string{"a", "b"})
+	wf.SetBodyJson([]string{"a", "b"})
 	resp, err = wf.Execute()
 	if err != nil {
 		t.Error(err)
@@ -347,7 +349,7 @@ func TestTemporary_BodyAutoJsonList(t *testing.T) {
 func TestTemporary_BodyAutoRawJson(t *testing.T) {
 	ses := NewSession()
 	wf := ses.Post("http://httpbin.org/post")
-	wf.SetBodyAuto(`{"a": 1}`)
+	wf.SetBodyJson(`{"a": 1}`)
 	resp, err := wf.Execute()
 	if err != nil {
 		t.Error(err)
@@ -358,7 +360,7 @@ func TestTemporary_BodyAutoRawJson(t *testing.T) {
 		t.Error(string(resp.Content()))
 	}
 
-	wf.SetBodyAuto(`{"a": {"b": "123"}}`)
+	wf.SetBodyJson(`{"a": {"b": "123"}}`)
 	resp, err = wf.Execute()
 	if err != nil {
 		t.Error(err)
@@ -369,7 +371,7 @@ func TestTemporary_BodyAutoRawJson(t *testing.T) {
 		t.Error(string(resp.Content()))
 	}
 
-	wf.SetBodyAuto(`{"a": {"b": '123"}}`)
+	wf.SetBodyJson(`{"a": {"b": '123"}}`)
 	resp, err = wf.Execute()
 	if err != nil {
 		t.Error(err)
@@ -380,7 +382,7 @@ func TestTemporary_BodyAutoRawJson(t *testing.T) {
 		t.Error(string(resp.Content()))
 	}
 
-	wf.SetBodyAuto([]byte(`{"a": 1}`))
+	wf.SetBodyJson([]byte(`{"a": 1}`))
 	resp, err = wf.Execute()
 	if err != nil {
 		t.Error(err)
@@ -391,7 +393,7 @@ func TestTemporary_BodyAutoRawJson(t *testing.T) {
 		t.Error(string(resp.Content()))
 	}
 
-	wf.SetBodyAuto([]byte(`{"a": {"b": "123"}}`))
+	wf.SetBodyJson([]byte(`{"a": {"b": "123"}}`))
 	resp, err = wf.Execute()
 	if err != nil {
 		t.Error(err)
@@ -402,7 +404,7 @@ func TestTemporary_BodyAutoRawJson(t *testing.T) {
 		t.Error(string(resp.Content()))
 	}
 
-	wf.SetBodyAuto([]byte(`{"a": {"b": '123"}}`))
+	wf.SetBodyJson([]byte(`{"a": {"b": '123"}}`))
 	resp, err = wf.Execute()
 	if err != nil {
 		t.Error(err)
@@ -425,7 +427,7 @@ func TestTemporary_BodyAutoStruct(t *testing.T) {
 	ses := NewSession()
 
 	wf := ses.Post("http://httpbin.org/post")
-	wf.SetBodyAuto(&AutoBodyTest{Name: "test"})
+	wf.SetBodyJson(&AutoBodyTest{Name: "test"})
 	resp, err := wf.Execute()
 	if err != nil {
 		t.Error(err)
@@ -437,7 +439,7 @@ func TestTemporary_BodyAutoStruct(t *testing.T) {
 	}
 
 	wf = ses.Post("http://httpbin.org/post")
-	wf.SetBodyAuto(AutoBodyTest{Name: "test"})
+	wf.SetBodyJson(AutoBodyTest{Name: "test"})
 	resp, err = wf.Execute()
 	if err != nil {
 		t.Error(err)
@@ -454,7 +456,7 @@ func TestTemporary_BodyAutoValues(t *testing.T) {
 	ses := NewSession()
 
 	wf := ses.Post("http://httpbin.org/post")
-	wf.SetBodyAuto(url.Values{
+	wf.SetBodyUrlencoded(url.Values{
 		"a": {"hello"},
 		"b": {"world"},
 	})
@@ -470,7 +472,7 @@ func TestTemporary_BodyAutoValues(t *testing.T) {
 	}
 
 	wf = ses.Post("http://httpbin.org/post")
-	wf.SetBodyAuto(map[string][]string{
+	wf.SetBodyUrlencoded(map[string][]string{
 		"a": {"hello"},
 		"b": {"world"},
 	})
@@ -485,7 +487,7 @@ func TestTemporary_BodyAutoValues(t *testing.T) {
 	}
 
 	wf = ses.Post("http://httpbin.org/post")
-	wf.SetBodyAuto(&AutoBodyTest{Name: "test"}, TypeJSON)
+	wf.SetBodyJson(&AutoBodyTest{Name: "test"})
 	resp, err = wf.Execute()
 	if err != nil {
 		t.Error(err)
@@ -497,7 +499,7 @@ func TestTemporary_BodyAutoValues(t *testing.T) {
 	}
 
 	wf = ses.Post("http://httpbin.org/post")
-	wf.SetBodyAuto([]byte("123456"), TypeStream)
+	wf.SetBodyStream([]byte("123456"))
 	resp, err = wf.Execute()
 	if err != nil {
 		t.Error(err)
@@ -509,7 +511,7 @@ func TestTemporary_BodyAutoValues(t *testing.T) {
 	}
 
 	wf = ses.Post("http://httpbin.org/post")
-	wf.SetBodyAuto([]byte("a=1&b=2"), TypeForm)
+	wf.SetBodyUrlencoded([]byte("a=1&b=2"))
 	resp, err = wf.Execute()
 	if err != nil {
 		t.Error(err)
@@ -524,4 +526,44 @@ func TestTemporary_BodyAutoValues(t *testing.T) {
 	if result != "2" {
 		t.Error(string(resp.Content()), result)
 	}
+}
+
+type Person struct {
+	Name   string `xml:"name,attr"`
+	Age    int    `xml:"age,attr"`
+	Gender string `xml:"gender,attr"`
+}
+
+type XmlRoot struct {
+	P []Person `xml:"person"`
+}
+
+func TestTemporary_BodySetEg1(t *testing.T) {
+
+	ses := NewSession()
+
+	wf := ses.Post("http://httpbin.org/post")
+	xmlcontent := `<root><person name="John" age="30" gender="Male"/><person name="Jane" age="25" gender="Female"/></root>`
+	var xmlobj XmlRoot
+	err := xml.Unmarshal([]byte(xmlcontent), &xmlobj)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	wf.SetBodyWithType(TypeXML, xmlcontent)
+	resp, err := wf.Execute()
+	if err != nil {
+		t.Error(err)
+	}
+
+	rjson := resp.Json()
+	var xmlresponse XmlRoot
+	err = xml.Unmarshal([]byte(rjson.Get("data").String()), &xmlresponse)
+	if err != nil {
+		log.Panic(err)
+	}
+	if xmlresponse.P[0].Name != "John" {
+		log.Panic(xmlresponse)
+	}
+
 }

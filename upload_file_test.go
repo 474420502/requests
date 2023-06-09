@@ -20,7 +20,7 @@ func TestUploadFile(t *testing.T) {
 			t.Error(err)
 			panic("")
 		}
-		wf.SetBodyAuto(ufile, TypeFormData)
+		wf.SetBodyFormData(ufile)
 		resp, err := wf.Execute()
 		if err != nil {
 			panic(err)
@@ -33,7 +33,7 @@ func TestUploadFile(t *testing.T) {
 		ses = NewSession()
 		wf = ses.Patch("http://httpbin.org/patch")
 
-		wf.SetBodyAuto("tests/json.file", TypeFormData)
+		wf.SetBodyFormData("tests/json.file")
 		resp, _ = wf.Execute()
 		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file0"]; !ok {
 			t.Error("file error", string(resp.Content()))
@@ -46,7 +46,7 @@ func TestUploadFile(t *testing.T) {
 		ufile.SetFileName("MyFile")
 		ufile.SetFieldName("MyField")
 		ufile.SetFileFromPath("tests/json.file")
-		wf.SetBodyAuto(ufile)
+		wf.SetBodyFormData(ufile)
 		resp, _ = wf.Execute()
 		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["MyField"]; !ok {
 			t.Error("file error", string(resp.Content()))
@@ -56,7 +56,7 @@ func TestUploadFile(t *testing.T) {
 		// wf = ses.Put("http://httpbin.org/put")
 
 		ufile.SetFileFromPath("tests/json.file")
-		wf.SetBodyAuto(*ufile)
+		wf.SetBodyFormData(*ufile)
 		resp, _ = wf.Execute()
 		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["MyField"]; !ok {
 			t.Error("file error", string(resp.Content()))
@@ -68,14 +68,14 @@ func TestUploadFile(t *testing.T) {
 		ufile = NewUploadFile()
 		ufile.SetFileName("MyFile")
 		ufile.SetFileFromPath("tests/json.file")
-		wf.SetBodyAuto(ufile)
+		wf.SetBodyFormData(ufile)
 		resp, _ = wf.Execute()
 		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file0"]; !ok {
 			t.Error("file error", string(resp.Content()))
 		}
 
 		ufile.SetFileFromPath("tests/json.file")
-		wf.SetBodyAuto(*ufile)
+		wf.SetBodyFormData(*ufile)
 		resp, _ = wf.Execute()
 		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file0"]; !ok {
 			t.Error("file error", string(resp.Content()))
@@ -92,7 +92,7 @@ func TestUploadFile(t *testing.T) {
 			t.Error(err)
 		}
 		ufileList = append(ufileList, ufile)
-		wf.SetBodyAuto(ufileList)
+		wf.SetBodyFormData(ufileList)
 		resp, _ = wf.Execute()
 		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file1"]; !ok {
 			t.Error("file error", string(resp.Content()))
@@ -102,7 +102,7 @@ func TestUploadFile(t *testing.T) {
 		// 	t.Error("Body is not Clear")
 		// }
 
-		wf.SetBodyAuto([]string{"tests/learn.js", "tests/json.file"}, TypeFormData)
+		wf.SetBodyFormData([]string{"tests/learn.js", "tests/json.file"})
 
 		resp, _ = wf.Execute()
 		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file1_0"]; !ok {
