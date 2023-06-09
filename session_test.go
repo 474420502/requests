@@ -83,7 +83,6 @@ func TestSession_Post_Urlencoded(t *testing.T) {
 			args: args{params: map[string]string{"a": "1", "b": "4"}},
 			want: regexp.MustCompile(`"form": [^"]+"a": "1",[^"]+"b": "4"[^"]+`),
 		},
-
 		{
 			name: "Post form map[string]int",
 			args: args{params: map[string]int{"a": 1, "b": 4}},
@@ -106,7 +105,6 @@ func TestSession_Post_Urlencoded(t *testing.T) {
 			args: args{params: map[string]uint64{"a": 1, "b": 4}},
 			want: regexp.MustCompile(`"form": [^"]+"a": "1",[^"]+"b": "4"[^"]+`),
 		},
-
 		{
 			name: "Post form map[string]float64",
 			args: args{params: map[string]float64{"a": 1.23, "b": 4.543}},
@@ -289,7 +287,6 @@ func TestSession_SetConfig(t *testing.T) {
 			args:    args{typeConfig: CRequestTimeout, values: 5},
 			wantErr: false,
 		},
-
 		{
 			name:    "test proxy",
 			args:    args{typeConfig: CProxy, values: "http://" + ProxyAddress},
@@ -310,7 +307,7 @@ func TestSession_SetConfig(t *testing.T) {
 			_, err := ses.Get("http://httpbin.org/get").Execute()
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Metchod error = %v", err)
+				t.Errorf("%v Metchod error = %v", tt.name, err)
 				return
 			}
 
