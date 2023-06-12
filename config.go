@@ -79,7 +79,7 @@ func (cfg *Config) SetWithCookiejar(is bool) {
 	}
 }
 
-// SetKeepAlives 默认keep alives
+// SetKeepAlives default keep alives
 func (cfg *Config) SetKeepAlives(is bool) {
 	cfg.ses.transport.DisableKeepAlives = !is
 }
@@ -111,4 +111,14 @@ func (cfg *Config) SetTimeout(t interface{}) {
 		panic(errors.New("error type " + reflect.TypeOf(v).String()))
 	}
 
+}
+
+// SetHeaderAuthorization method is used to add the JWT token's Authorization field to the HTTP header in the ses field of the Config structure.
+// The tokenString parameter is a string that represents the string representation of the JWT token.
+// In this method, the cfg.ses.Header.Add() method is used to add the Authorization field to the HTTP request header and set its value to the passed JWT token string.
+func (cfg *Config) SetHeaderAuthorization(tokenString string) {
+	// SetHeaderAuthorization方法用于在Config结构体中的ses字段的HTTP头部添加JWT令牌的Authorization字段。
+	// 参数tokenString是一个字符串，它代表JWT令牌的字符串表示形式。
+	// 在此方法中，使用cfg.ses.Header.Add()方法将Authorization字段添加到HTTP请求的头部，并将其值设置为传递的JWT令牌字符串。
+	cfg.ses.Header.Add("Authorization", tokenString)
 }

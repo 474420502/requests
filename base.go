@@ -2,19 +2,20 @@ package requests
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
 )
 
 type M map[string]interface{}
 
-func buildBodyRequest(tp *Temporary) *http.Request {
+func buildBodyRequest(tp *Temporary) (*http.Request, error) {
 	var req *http.Request
 	var err error
 
 	if tp.Body == nil {
 		req, err = http.NewRequest(tp.Method, tp.GetRawURL(), nil)
 		if err != nil {
-			panic(err)
+			return req, err
 		}
 	} else {
 		// var buf = bytes.NewBuffer(nil)
@@ -58,15 +59,15 @@ func buildBodyRequest(tp *Temporary) *http.Request {
 		// 	tp.Header.Add("Accept-Encoding", "br")
 		// 	tp.Header.Add("Content-Encoding", "br")
 		default:
-			panic("compress type not support")
+			return req, errors.New("compress type not support")
 		}
 
 		req, err = http.NewRequest(tp.Method, tp.GetRawURL(), buf)
 		if err != nil {
-			panic(err)
+			return req, err
 		}
 		// req.ContentLength = int64(bodybuf.Len())
 	}
 
-	return req
+	return req, nil
 }

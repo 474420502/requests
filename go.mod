@@ -1,6 +1,6 @@
 module github.com/474420502/requests
 
-go 1.17
+go 1.20
 
 require (
 	github.com/474420502/random v0.4.1

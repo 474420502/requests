@@ -454,16 +454,9 @@ func setTempCookieRequest(req *http.Request, wf *Temporary) {
 
 // Execute 执行. 请求后会清楚Body的内容. 需要重新
 func (tp *Temporary) Execute() (IResponse, error) {
-	if tp.mwriter != nil {
-		tp.mwriter.Close()
-		tp.mwriter = nil
-	}
-	req := buildBodyRequest(tp)
-	setHeaderRequest(req, tp)
-	setTempCookieRequest(req, tp)
-
-	if tp.session.auth != nil {
-		req.SetBasicAuth(tp.session.auth.User, tp.session.auth.Password)
+	req, err := tp.BuildRequest()
+	if err != nil {
+		panic(err)
 	}
 
 	resp, err := tp.session.client.Do(req)
@@ -472,4 +465,24 @@ func (tp *Temporary) Execute() (IResponse, error) {
 	}
 
 	return FromHTTPResponse(resp, tp.session.Is.isDecompressNoAccept)
+}
+
+// BuildRequest 根据Session Temporary 的条件创建 http.request
+func (tp *Temporary) BuildRequest() (*http.Request, error) {
+	if tp.mwriter != nil {
+		tp.mwriter.Close()
+		tp.mwriter = nil
+	}
+	req, err := buildBodyRequest(tp)
+	if err != nil {
+		return req, err
+	}
+	setHeaderRequest(req, tp)
+	setTempCookieRequest(req, tp)
+
+	if tp.session.auth != nil {
+		req.SetBasicAuth(tp.session.auth.User, tp.session.auth.Password)
+	}
+
+	return req, nil
 }
