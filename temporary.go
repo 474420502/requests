@@ -453,7 +453,7 @@ func setTempCookieRequest(req *http.Request, wf *Temporary) {
 }
 
 // Execute 执行. 请求后会清楚Body的内容. 需要重新
-func (tp *Temporary) Execute() (IResponse, error) {
+func (tp *Temporary) Execute() (*Response, error) {
 	req, err := tp.BuildRequest()
 	if err != nil {
 		panic(err)
@@ -464,7 +464,12 @@ func (tp *Temporary) Execute() (IResponse, error) {
 		return nil, err
 	}
 
-	return FromHTTPResponse(resp, tp.session.Is.isDecompressNoAccept)
+	myResponse, err := FromHTTPResponse(resp, tp.session.Is.isDecompressNoAccept)
+	if err != nil {
+		return nil, err
+	}
+	myResponse.readResponse = resp
+	return myResponse, nil
 }
 
 // BuildRequest 根据Session Temporary 的条件创建 http.request

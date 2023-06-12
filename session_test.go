@@ -278,7 +278,7 @@ func TestSession_SetConfig(t *testing.T) {
 	}{
 		{
 			name:    "test timeout",
-			args:    args{typeConfig: CRequestTimeout, values: 0.0001},
+			args:    args{typeConfig: CRequestTimeout, values: 0.000000001},
 			wantErr: true,
 		},
 
@@ -305,7 +305,6 @@ func TestSession_SetConfig(t *testing.T) {
 			}
 
 			_, err := ses.Get("http://httpbin.org/get").Execute()
-
 			if (err != nil) != tt.wantErr {
 				t.Errorf("%v Metchod error = %v", tt.name, err)
 				return
