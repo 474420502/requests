@@ -8,6 +8,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -490,4 +491,22 @@ func (tp *Temporary) BuildRequest() (*http.Request, error) {
 	}
 
 	return req, nil
+}
+
+// TestInServer 根据Session Temporary 的条件创建 http.request. 使用ITestServer 进行测试
+func (tp *Temporary) TestInServer(server ITestServer) (*Response, error) {
+
+	req, err := tp.BuildRequest()
+	if err != nil {
+		return nil, err
+	}
+
+	w := httptest.NewRecorder()
+	server.ServeHTTP(w, req)
+	resp, err := FromHTTPResponse(w.Result(), false)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }
