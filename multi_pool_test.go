@@ -10,6 +10,7 @@ func TestRequestPool(t *testing.T) {
 	pool := NewRequestPool(3) // 设置最大并发数3
 
 	ses := NewSession()
+	ses.Config().SetTimeout(3 * time.Second)
 	// 添加6个GET请求到httpbin
 	urls := []string{"https://httpbin.org/get",
 		"https://httpbin.org/get",
@@ -18,9 +19,6 @@ func TestRequestPool(t *testing.T) {
 		tp := ses.Get(url)
 		pool.Add(tp)
 	}
-
-	// 设置1秒超时
-	pool.SetPerTimeout(5 * time.Second)
 
 	// 执行并验证正确的响应
 	resps := pool.Execute(nil)
@@ -35,8 +33,8 @@ func TestRequestPool(t *testing.T) {
 	}
 
 	// 添加两个故意超时的请求
-	pool.Add(ses.Get("https://httpbin.org/delay/6"))
-	pool.Add(ses.Get("https://httpbin.org/delay/7"))
+	pool.Add(ses.Get("https://httpbin.org/delay/4"))
+	pool.Add(ses.Get("https://httpbin.org/delay/5"))
 
 	resps = pool.Execute(nil)
 	if resps[1] != nil || resps[2] != nil {
