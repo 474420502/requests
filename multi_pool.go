@@ -18,7 +18,7 @@ type RequestPool struct {
 
 func NewRequestPool(runnerCount int) *RequestPool {
 	return &RequestPool{
-		isBar:       true,
+		isBar:       false,
 		runnerCount: runnerCount,
 		sem:         make(chan int, runnerCount),
 	}

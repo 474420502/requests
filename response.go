@@ -11,19 +11,6 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// IResponse interface Response from Execute()
-type IResponse interface {
-	ContentString() string
-	Content() []byte
-	Json() gjson.Result
-	GetStatus() string
-	GetStatusCode() int
-	GetHeader() http.Header
-	GetCookie() []*http.Cookie
-	// 返回不同的自定义的Response, 也可以是其他定义的结构体如WebDriver
-	GetResponse() interface{}
-}
-
 // Response Response from Execute()
 type Response struct {
 	readBytes    []byte

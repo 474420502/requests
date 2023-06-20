@@ -493,8 +493,8 @@ func (tp *Temporary) BuildRequest() (*http.Request, error) {
 	return req, nil
 }
 
-// TestInServer 根据Session Temporary 的条件创建 http.request. 使用ITestServer 进行测试. 默认无解压
-func (tp *Temporary) TestInServer(server ITestServer) (*Response, error) {
+// TestExecute 根据Session Temporary 的条件创建 http.request. 使用ITestServer 进行测试. 默认无解压
+func (tp *Temporary) TestExecute(server ITestServer) (*Response, error) {
 
 	req, err := tp.BuildRequest()
 	if err != nil {
