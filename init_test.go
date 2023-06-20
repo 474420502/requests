@@ -22,7 +22,7 @@ func init() {
 	cmd := exec.Command("/bin/bash", "-c", "docker ps | grep httpbin")
 	_, err := cmd.Output()
 	if err != nil {
-		log.Println("recommend:\n1. docker run --rm -p 80:80 kennethreitz/httpbin  \n2. echo \"127.0.0.1\thttpbin.org\" >> /etc/hosts")
+		log.Println("recommend:\n1. docker run --rm -p 80:80 kennethreitz/httpbin\n2. echo \"127.0.0.1 httpbin.org\" >> /etc/hosts")
 	}
 
 	time.Sleep(time.Millisecond * 100)
