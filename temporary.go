@@ -511,8 +511,8 @@ func (tp *Temporary) TestExecute(server ITestServer) (*Response, error) {
 	return resp, nil
 }
 
-// TestInServer 根据Session Temporary 的条件创建 http.request. 使用ITestServer 进行测试. 如果body需要解压, 自动解压
-func (tp *Temporary) TestInServerWithDecompress(server ITestServer) (*Response, error) {
+// TestExecuteWithDecompress 根据Session Temporary 的条件创建 http.request. 使用ITestServer 进行测试. 如果body需要解压, 自动解压
+func (tp *Temporary) TestExecuteWithDecompress(server ITestServer) (*Response, error) {
 
 	req, err := tp.BuildRequest()
 	if err != nil {

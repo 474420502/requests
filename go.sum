@@ -7,6 +7,8 @@ github.com/elazarl/goproxy/ext v0.0.0-20210801061803-8e322dfb79c4 h1:jLY5dBmGEgd
 github.com/elazarl/goproxy/ext v0.0.0-20210801061803-8e322dfb79c4/go.mod h1:gNh8nYJoAm43RfaxurUnxr+N1PwuFV3ZMl/efxlIlY8=
 github.com/klauspost/compress v1.13.5 h1:9O69jUPDcsT9fEm74W92rZL9FQY7rCdaXVneq+yyzl4=
 github.com/klauspost/compress v1.13.5/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47etQ6QUkpK6sk=
+github.com/mccutchen/go-httpbin/v2 v2.9.0 h1:0c8loz/kMEdBmcHJZh0MUgKX84U19AlLk7h6nf2Wkx4=
+github.com/mccutchen/go-httpbin/v2 v2.9.0/go.mod h1:+DBHcmg6EOeoizuiOI8iL12VIHXx+9YQNlz+gjB9uxk=
 github.com/rogpeppe/go-charset v0.0.0-20180617210344-2471d30d28b4/go.mod h1:qgYeAmZ5ZIpBWTGllZSQnw97Dj+woV0toclVaRGI8pc=
 github.com/schollz/progressbar v1.0.0 h1:gbyFReLHDkZo8mxy/dLWMr+Mpb1MokGJ1FqCiqacjZM=
 github.com/schollz/progressbar v1.0.0/go.mod h1:/l9I7PC3L3erOuz54ghIRKUEFcosiWfLvJv+Eq26UMs=
