@@ -91,7 +91,12 @@ func (p *ParamRegexp) Set(value interface{}) {
 		p.Params[sel] = v
 	default:
 		vv := reflect.ValueOf(v)
-		if vv.Kind() == reflect.String {
+		switch k := vv.Kind(); k {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			p.Params[sel] = strconv.FormatInt(vv.Int(), 10)
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			p.Params[sel] = strconv.FormatUint(vv.Uint(), 10)
+		case reflect.String:
 			p.Params[sel] = vv.String()
 		}
 	}
@@ -224,6 +229,16 @@ func (p *ParamRegexp) ArraySet(index int, value interface{}) {
 		p.Params[sel] = strconv.FormatFloat(float64(v), 'f', -1, 32)
 	case string:
 		p.Params[sel] = v
+	default:
+		vv := reflect.ValueOf(v)
+		switch k := vv.Kind(); k {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			p.Params[sel] = strconv.FormatInt(vv.Int(), 10)
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			p.Params[sel] = strconv.FormatUint(vv.Uint(), 10)
+		case reflect.String:
+			p.Params[sel] = vv.String()
+		}
 	}
 	p.Temp.ParsedURL.Path = concat(p.Params)
 }

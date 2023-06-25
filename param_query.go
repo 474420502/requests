@@ -13,6 +13,16 @@ type ParamQuery struct {
 	Key  string
 }
 
+// case string:
+// 	values.Set(p.Key, v)
+// case fmt.Stringer:
+// 	values.Set(p.Key, v.String())
+// case int, int8, int16, int32, int64,
+// 	 uint, uint8, uint16, uint32, uint64:
+// 	values.Set(p.Key, strconv.FormatInt(int64(v), 10))
+// case float32, float64:
+// 	values.Set(p.Key, strconv.FormatFloat(float64(v), 'f', -1, 64))
+
 // Set 单个整型参数设置
 func (p *ParamQuery) Set(value interface{}) {
 	values := p.Temp.GetQuery()
@@ -45,7 +55,12 @@ func (p *ParamQuery) Set(value interface{}) {
 		values.Set(p.Key, v)
 	default:
 		vv := reflect.ValueOf(v)
-		if vv.Kind() == reflect.String {
+		switch k := vv.Kind(); k {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			values.Set(p.Key, strconv.FormatInt(vv.Int(), 10))
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			values.Set(p.Key, strconv.FormatUint(vv.Uint(), 10))
+		case reflect.String:
 			values.Set(p.Key, vv.String())
 		}
 	}
@@ -183,7 +198,12 @@ func (p *ParamQuery) ArraySet(index int, value interface{}) {
 		vs[index] = v
 	default:
 		vv := reflect.ValueOf(v)
-		if vv.Kind() == reflect.String {
+		switch k := vv.Kind(); k {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			vs[index] = strconv.FormatInt(vv.Int(), 10)
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			vs[index] = strconv.FormatUint(vv.Uint(), 10)
+		case reflect.String:
 			vs[index] = vv.String()
 		}
 	}
