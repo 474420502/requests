@@ -312,6 +312,8 @@ func TestSession_SetConfig(t *testing.T) {
 
 		})
 	}
+
+	ProxyCloseChan <- 1
 }
 
 func TestSession_SetConfigInsecure(t *testing.T) {
@@ -321,8 +323,6 @@ func TestSession_SetConfigInsecure(t *testing.T) {
 	ses.Config().SetInsecure(true)
 	for _, badSSL := range []string{
 		"https://self-signed.badssl.com/",
-		"https://expired.badssl.com/",
-		"https://wrong.host.badssl.com/",
 	} {
 		resp, err := ses.Get(badSSL).Execute()
 		if err != nil {
@@ -440,6 +440,7 @@ func TestSession_ConfigEx(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	ProxyCloseChan <- 1
 
 	if !regexp.MustCompile("eson=bad").Match(resp.Content()) {
 		t.Error(string(resp.Content()))

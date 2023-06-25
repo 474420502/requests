@@ -26,43 +26,17 @@ type ParamQuery struct {
 // Set 单个整型参数设置
 func (p *ParamQuery) Set(value interface{}) {
 	values := p.Temp.GetQuery()
-	switch v := value.(type) {
-	case int64:
-		values.Set(p.Key, strconv.FormatInt(v, 10))
-	case uint64:
-		values.Set(p.Key, strconv.FormatUint(v, 10))
-	case float64:
-		values.Set(p.Key, strconv.FormatFloat(v, 'f', -1, 64))
-	case int:
-		values.Set(p.Key, strconv.FormatInt(int64(v), 10))
-	case int8:
-		values.Set(p.Key, strconv.FormatInt(int64(v), 10))
-	case int16:
-		values.Set(p.Key, strconv.FormatInt(int64(v), 10))
-	case int32:
-		values.Set(p.Key, strconv.FormatInt(int64(v), 10))
-	case uint:
-		values.Set(p.Key, strconv.FormatUint(uint64(v), 10))
-	case uint8:
-		values.Set(p.Key, strconv.FormatUint(uint64(v), 10))
-	case uint16:
-		values.Set(p.Key, strconv.FormatUint(uint64(v), 10))
-	case uint32:
-		values.Set(p.Key, strconv.FormatUint(uint64(v), 10))
-	case float32:
-		values.Set(p.Key, strconv.FormatFloat(float64(v), 'f', -1, 32))
-	case string:
-		values.Set(p.Key, v)
-	default:
-		vv := reflect.ValueOf(v)
-		switch k := vv.Kind(); k {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			values.Set(p.Key, strconv.FormatInt(vv.Int(), 10))
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			values.Set(p.Key, strconv.FormatUint(vv.Uint(), 10))
-		case reflect.String:
-			values.Set(p.Key, vv.String())
-		}
+
+	vv := reflect.ValueOf(value)
+	switch k := vv.Kind(); k {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		values.Set(p.Key, strconv.FormatInt(vv.Int(), 10))
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		values.Set(p.Key, strconv.FormatUint(vv.Uint(), 10))
+	case reflect.Float32, reflect.Float64:
+		values.Set(p.Key, strconv.FormatFloat(vv.Float(), 'f', -1, 64))
+	case reflect.String:
+		values.Set(p.Key, vv.String())
 	}
 	p.Temp.SetQuery(values)
 }
@@ -169,44 +143,18 @@ func (p *ParamQuery) ArraySet(index int, value interface{}) {
 	values := p.Temp.GetQuery()
 	vs := values[p.Key]
 
-	switch v := value.(type) {
-	case int64:
-		vs[index] = strconv.FormatInt(v, 10)
-	case uint64:
-		vs[index] = strconv.FormatUint(v, 10)
-	case float64:
-		vs[index] = strconv.FormatFloat(v, 'f', -1, 64)
-	case int:
-		vs[index] = strconv.FormatInt(int64(v), 10)
-	case int8:
-		vs[index] = strconv.FormatInt(int64(v), 10)
-	case int16:
-		vs[index] = strconv.FormatInt(int64(v), 10)
-	case int32:
-		vs[index] = strconv.FormatInt(int64(v), 10)
-	case uint:
-		vs[index] = strconv.FormatUint(uint64(v), 10)
-	case uint8:
-		vs[index] = strconv.FormatUint(uint64(v), 10)
-	case uint16:
-		vs[index] = strconv.FormatUint(uint64(v), 10)
-	case uint32:
-		vs[index] = strconv.FormatUint(uint64(v), 10)
-	case float32:
-		vs[index] = strconv.FormatFloat(float64(v), 'f', -1, 32)
-	case string:
-		vs[index] = v
-	default:
-		vv := reflect.ValueOf(v)
-		switch k := vv.Kind(); k {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			vs[index] = strconv.FormatInt(vv.Int(), 10)
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			vs[index] = strconv.FormatUint(vv.Uint(), 10)
-		case reflect.String:
-			vs[index] = vv.String()
-		}
+	vv := reflect.ValueOf(value)
+	switch k := vv.Kind(); k {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		vs[index] = strconv.FormatInt(vv.Int(), 10)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		vs[index] = strconv.FormatUint(vv.Uint(), 10)
+	case reflect.Float32, reflect.Float64:
+		vs[index] = strconv.FormatFloat(vv.Float(), 'f', -1, 64)
+	case reflect.String:
+		vs[index] = vv.String()
 	}
+
 	p.Temp.SetQuery(values)
 }
 

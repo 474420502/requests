@@ -27,7 +27,7 @@ func checkArrayParam(tp *Temporary, param string, vaild string) error {
 	if args, ok := data["args"]; ok {
 		if page, ok := args.(map[string]interface{})[param]; ok {
 			if fmt.Sprint(page)[0:len(vaild)] != vaild {
-				log.Println(data, string(resp.Content()))
+				// log.Println(data, string(resp.Content()))
 				return fmt.Errorf("param: %#v", fmt.Sprint(page))
 			}
 		} else {
@@ -364,14 +364,14 @@ func checkBaseTypeParamSet(tp *Temporary, r *random.Random, t *testing.T) {
 	v = r.Float64()
 
 	p.Set(v.(float64))
-	err = checkParam(tp, "float", fmt.Sprintf("%v", v))
+	err = checkParam(tp, "float", fmt.Sprintf("%v", v.(float64)))
 	if err != nil {
 		t.Error(err)
 	}
 
 	v = r.Float32()
 	p.Set(v.(float32))
-	checkParam(tp, "float", fmt.Sprintf("%v", v))
+	checkParam(tp, "float", fmt.Sprintf("%v", float64(v.(float32))))
 
 }
 
@@ -465,14 +465,15 @@ func checkBaseTypeParamRegexpSet(tp *Temporary, r *random.Random, t *testing.T) 
 	p.Set(v.(float64))
 	purl = tp.GetURLRawPath()
 	if !regexp.MustCompile(fmt.Sprintf("Page-%v", v)).MatchString(purl) {
-		t.Error(purl)
+		t.Error(purl, ",", fmt.Sprintf("Page-%v", v))
+
 	}
 
 	v = r.Float32()
 	p.Set(v.(float32))
 	purl = tp.GetURLRawPath()
-	if !regexp.MustCompile(fmt.Sprintf("Page-%v", v)).MatchString(purl) {
-		t.Error(purl)
+	if !regexp.MustCompile(fmt.Sprintf("Page-%v", float64(v.(float32)))).MatchString(purl) {
+		t.Error(purl, ",", fmt.Sprintf("Page-%v", v))
 	}
 
 }
@@ -567,14 +568,14 @@ func checkBaseTypeParamRegexpArraySet(tp *Temporary, r *random.Random, t *testin
 	p.ArraySet(1, v.(float64))
 	purl = tp.GetURLRawPath()
 	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, v)).MatchString(purl) {
-		t.Error(purl)
+		t.Error(fmt.Sprintf(`Page-([0-9\.]+)-%v`, v), ",", purl)
 	}
 
 	v = r.Float32()
 	p.ArraySet(1, v.(float32))
 	purl = tp.GetURLRawPath()
-	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, v)).MatchString(purl) {
-		t.Error(purl)
+	if !regexp.MustCompile(fmt.Sprintf(`Page-([0-9\.]+)-%v`, float64(v.(float32)))).MatchString(purl) {
+		t.Error(fmt.Sprintf(`Page-([0-9\.]+)-%v`, v), ",", purl)
 	}
 
 }

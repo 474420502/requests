@@ -1,7 +1,6 @@
 package requests
 
 import (
-	"log"
 	"sync"
 
 	"github.com/schollz/progressbar"
@@ -14,6 +13,11 @@ type RequestPool struct {
 	temps []*Temporary
 	lock  sync.Mutex
 	sem   chan int
+}
+
+type MultiResponse struct {
+	*Response
+	Error error
 }
 
 func NewRequestPool(runnerCount int) *RequestPool {
@@ -36,12 +40,12 @@ func (pl *RequestPool) SetBar(is bool) {
 	pl.lock.Unlock()
 }
 
-func (pl *RequestPool) Execute(errHandler func(int, error)) []*Response {
+func (pl *RequestPool) Execute() []*MultiResponse {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
-	respChan := make(chan *Response, len(pl.temps))
-	var result []*Response
+	respChan := make(chan *MultiResponse, len(pl.temps))
+	var result []*MultiResponse
 
 	var bar *progressbar.ProgressBar
 	if pl.isBar {
@@ -59,15 +63,7 @@ func (pl *RequestPool) Execute(errHandler func(int, error)) []*Response {
 				}
 			}()
 			r, err := tp.Execute()
-			if err != nil {
-				if errHandler != nil {
-					errHandler(i, err)
-				} else {
-					log.Println(i, err)
-				}
-			} else {
-				respChan <- r
-			}
+			respChan <- &MultiResponse{Response: r, Error: err}
 		}(i, tp)
 	}
 

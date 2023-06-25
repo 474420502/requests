@@ -70,7 +70,7 @@ func TestReadmeEg1_2(t *testing.T) {
 	tp := ses.Get("http://httpbin.org/anything")
 	tp.SetBodyJson(`{"a": 1, "b": 2}`)
 	resp, _ := tp.Execute()
-	log.Println(string(resp.Content()))
+	// log.Println(string(resp.Content()))
 	// {
 	// 	"args": {},
 	// 	"data": "{\"a\": 1, \"b\": 2}",
@@ -95,7 +95,7 @@ func TestReadmeEg1_2(t *testing.T) {
 	tp = ses.Get("http://httpbin.org/anything")
 	tp.SetBodyJson(map[string]interface{}{"a": "1", "b": 2})
 	resp, _ = tp.Execute()
-	log.Println(resp.ContentString())
+	// log.Println(resp.ContentString())
 
 	tp = ses.Get("http://httpbin.org/anything")
 	tp.SetBodyJson(H{"a": "1", "b": 2})

@@ -62,43 +62,16 @@ func concat(ss []string) string {
 func (p *ParamRegexp) Set(value interface{}) {
 
 	sel := p.Selected[0]
-	switch v := value.(type) {
-	case int64:
-		p.Params[sel] = strconv.FormatInt(v, 10)
-	case uint64:
-		p.Params[sel] = strconv.FormatUint(v, 10)
-	case float64:
-		p.Params[sel] = strconv.FormatFloat(v, 'f', -1, 64)
-	case int:
-		p.Params[sel] = strconv.FormatInt(int64(v), 10)
-	case int8:
-		p.Params[sel] = strconv.FormatInt(int64(v), 10)
-	case int16:
-		p.Params[sel] = strconv.FormatInt(int64(v), 10)
-	case int32:
-		p.Params[sel] = strconv.FormatInt(int64(v), 10)
-	case uint:
-		p.Params[sel] = strconv.FormatUint(uint64(v), 10)
-	case uint8:
-		p.Params[sel] = strconv.FormatUint(uint64(v), 10)
-	case uint16:
-		p.Params[sel] = strconv.FormatUint(uint64(v), 10)
-	case uint32:
-		p.Params[sel] = strconv.FormatUint(uint64(v), 10)
-	case float32:
-		p.Params[sel] = strconv.FormatFloat(float64(v), 'f', -1, 32)
-	case string:
-		p.Params[sel] = v
-	default:
-		vv := reflect.ValueOf(v)
-		switch k := vv.Kind(); k {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			p.Params[sel] = strconv.FormatInt(vv.Int(), 10)
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			p.Params[sel] = strconv.FormatUint(vv.Uint(), 10)
-		case reflect.String:
-			p.Params[sel] = vv.String()
-		}
+	vv := reflect.ValueOf(value)
+	switch k := vv.Kind(); k {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		p.Params[sel] = strconv.FormatInt(vv.Int(), 10)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		p.Params[sel] = strconv.FormatUint(vv.Uint(), 10)
+	case reflect.Float64, reflect.Float32:
+		p.Params[sel] = strconv.FormatFloat(vv.Float(), 'f', -1, 64)
+	case reflect.String:
+		p.Params[sel] = vv.String()
 	}
 	p.Temp.ParsedURL.Path = concat(p.Params)
 }
@@ -202,43 +175,16 @@ func (p *ParamRegexp) Add(value interface{}) error {
 // ArraySet 通用数组类型 根据 index 设置 value 为通用计算类型
 func (p *ParamRegexp) ArraySet(index int, value interface{}) {
 	sel := p.Selected[index]
-	switch v := value.(type) {
-	case int64:
-		p.Params[sel] = strconv.FormatInt(v, 10)
-	case uint64:
-		p.Params[sel] = strconv.FormatUint(v, 10)
-	case float64:
-		p.Params[sel] = strconv.FormatFloat(v, 'f', -1, 64)
-	case int:
-		p.Params[sel] = strconv.FormatInt(int64(v), 10)
-	case int8:
-		p.Params[sel] = strconv.FormatInt(int64(v), 10)
-	case int16:
-		p.Params[sel] = strconv.FormatInt(int64(v), 10)
-	case int32:
-		p.Params[sel] = strconv.FormatInt(int64(v), 10)
-	case uint:
-		p.Params[sel] = strconv.FormatUint(uint64(v), 10)
-	case uint8:
-		p.Params[sel] = strconv.FormatUint(uint64(v), 10)
-	case uint16:
-		p.Params[sel] = strconv.FormatUint(uint64(v), 10)
-	case uint32:
-		p.Params[sel] = strconv.FormatUint(uint64(v), 10)
-	case float32:
-		p.Params[sel] = strconv.FormatFloat(float64(v), 'f', -1, 32)
-	case string:
-		p.Params[sel] = v
-	default:
-		vv := reflect.ValueOf(v)
-		switch k := vv.Kind(); k {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			p.Params[sel] = strconv.FormatInt(vv.Int(), 10)
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			p.Params[sel] = strconv.FormatUint(vv.Uint(), 10)
-		case reflect.String:
-			p.Params[sel] = vv.String()
-		}
+	vv := reflect.ValueOf(value)
+	switch k := vv.Kind(); k {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		p.Params[sel] = strconv.FormatInt(vv.Int(), 10)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		p.Params[sel] = strconv.FormatUint(vv.Uint(), 10)
+	case reflect.Float64, reflect.Float32:
+		p.Params[sel] = strconv.FormatFloat(vv.Float(), 'f', -1, 64)
+	case reflect.String:
+		p.Params[sel] = vv.String()
 	}
 	p.Temp.ParsedURL.Path = concat(p.Params)
 }
