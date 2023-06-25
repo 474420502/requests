@@ -25,5 +25,5 @@ func init() {
 		log.Println("recommend:\n1. docker run --rm -p 80:80 kennethreitz/httpbin\n2. echo \"127.0.0.1 httpbin.org\" >> /etc/hosts")
 	}
 
-	time.Sleep(time.Millisecond * 100)
+	time.Sleep(time.Millisecond * 500)
 }

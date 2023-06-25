@@ -1022,7 +1022,6 @@ func TestFocreParamRegexp(t *testing.T) {
 		checkBaseTypeParamRegexpAdd(tp, r, t)
 		checkBaseTypeParamRegexpArrayAdd(tp, r, t)
 	}
-
 }
 
 // func Benchmark(b *testing.B) {

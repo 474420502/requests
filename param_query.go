@@ -1,6 +1,9 @@
 package requests
 
-import "strconv"
+import (
+	"reflect"
+	"strconv"
+)
 
 // import "strconv"
 
@@ -40,6 +43,11 @@ func (p *ParamQuery) Set(value interface{}) {
 		values.Set(p.Key, strconv.FormatFloat(float64(v), 'f', -1, 32))
 	case string:
 		values.Set(p.Key, v)
+	default:
+		vv := reflect.ValueOf(v)
+		if vv.Kind() == reflect.String {
+			values.Set(p.Key, vv.String())
+		}
 	}
 	p.Temp.SetQuery(values)
 }
@@ -173,6 +181,11 @@ func (p *ParamQuery) ArraySet(index int, value interface{}) {
 		vs[index] = strconv.FormatFloat(float64(v), 'f', -1, 32)
 	case string:
 		vs[index] = v
+	default:
+		vv := reflect.ValueOf(v)
+		if vv.Kind() == reflect.String {
+			vs[index] = vv.String()
+		}
 	}
 	p.Temp.SetQuery(values)
 }

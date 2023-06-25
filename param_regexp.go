@@ -3,6 +3,7 @@ package requests
 import (
 	"bytes"
 	"log"
+	"reflect"
 	"regexp"
 	"strconv"
 )
@@ -88,6 +89,11 @@ func (p *ParamRegexp) Set(value interface{}) {
 		p.Params[sel] = strconv.FormatFloat(float64(v), 'f', -1, 32)
 	case string:
 		p.Params[sel] = v
+	default:
+		vv := reflect.ValueOf(v)
+		if vv.Kind() == reflect.String {
+			p.Params[sel] = vv.String()
+		}
 	}
 	p.Temp.ParsedURL.Path = concat(p.Params)
 }
