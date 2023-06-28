@@ -16,8 +16,10 @@ import (
 
 // Temporary    这个并不影响Session的属性变化
 type Temporary struct {
-	session      *Session
-	compressType CompressType
+	session *Session
+
+	acceptEncoding  []AcceptEncodingType
+	contentEncoding ContentEncodingType
 	// mwriter   *MultipartWriter
 	mwriter   *multipart.Writer
 	ParsedURL *url.URL
@@ -67,14 +69,14 @@ func (tp *Temporary) GetHeader() http.Header {
 	return tp.Header
 }
 
-// SetCompress 设置Temporary Compress
-func (tp *Temporary) SetCompress(c CompressType) {
-	tp.compressType = c
+// AddAcceptEncoding 设置Temporary Compress
+func (tp *Temporary) AddAcceptEncoding(c AcceptEncodingType) {
+	tp.acceptEncoding = append(tp.acceptEncoding, c)
 }
 
 // GetCompress 获取Temporary Compress
-func (tp *Temporary) GetCompress() CompressType {
-	return tp.compressType
+func (tp *Temporary) GetAcceptEncoding() []AcceptEncodingType {
+	return tp.acceptEncoding
 }
 
 // MergeHeader 合并 Header. 并进 Temporary
@@ -257,11 +259,6 @@ func (tp *Temporary) SetBody(body io.Reader) *Temporary {
 
 	return tp
 }
-
-// // GetBody 参数设置
-// func (tp *Temporary) GetBody() IBody {
-// 	return tp.Body
-// }
 
 // GetBodyMultipart if get multipart, body = NewBody.  使用multipart/form-data. 传递keyvalue. 传递file.
 // 每次都需要重置

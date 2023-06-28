@@ -65,6 +65,105 @@ func TestResponseDeflate(t *testing.T) {
 
 }
 
+func TestAcceptCompressType(t *testing.T) {
+	ses := NewSession() //requests.NewSession()
+	ses.Config().AddAcceptEncoding(AcceptEncodingGzip)
+	tp := ses.Get("http://0.0.0.0/compress")
+	resp, err := tp.TestExecute(TestServer)
+	if err != nil {
+		panic(err)
+	}
+	if resp.ContentString() != "hello compress" {
+		t.Error(resp.ContentString())
+	}
+
+	ses = NewSession() //requests.NewSession()
+	ses.Config().AddAcceptEncoding(AcceptEncodingDeflate)
+	tp = ses.Get("http://0.0.0.0/compress")
+	resp, err = tp.TestExecute(TestServer)
+	if err != nil {
+		panic(err)
+	}
+	if resp.ContentString() != "hello compress" {
+		t.Error(resp.ContentString())
+	}
+
+	ses = NewSession() //requests.NewSession()
+	tp = ses.Get("http://0.0.0.0/compress")
+	resp, err = tp.TestExecute(TestServer)
+	if err != nil {
+		panic(err)
+	}
+	if resp.ContentString() != "hello" {
+		t.Error(resp.ContentString())
+	}
+
+}
+
+func TestCaseAcceptEncoding2(t *testing.T) {
+	ses := NewSession() //requests.NewSession()
+	ses.Config().AddAcceptEncoding(AcceptEncodingBr)
+	tp := ses.Get("http://0.0.0.0/compress")
+	tp.AddAcceptEncoding(AcceptEncodingDeflate)
+	resp, err := tp.TestExecute(TestServer)
+	if err != nil {
+		panic(err)
+	}
+	if resp.ContentString() != "hello compress" {
+		t.Error(resp.ContentString())
+	}
+}
+
+func TestContentCompressType(t *testing.T) {
+	type H map[string]interface{}
+	ses := NewSession() //requests.NewSession()
+	ses.Config().SetContentEncoding(ContentEncodingBr)
+	tp := ses.Get("http://0.0.0.0/content-compress")
+	tp.SetBodyJson(H{"key": "hello compress"})
+	resp, err := tp.TestExecute(TestServer)
+	if err != nil {
+		panic(err)
+	}
+	if resp.ContentString() != "hello compress" {
+		t.Error(resp.ContentString())
+	}
+
+	ses = NewSession() //requests.NewSession()
+	ses.Config().SetContentEncoding(ContentEncodingDeflate)
+	tp = ses.Get("http://0.0.0.0/content-compress")
+	tp.SetBodyJson(H{"key": "hello compress"})
+	resp, err = tp.TestExecute(TestServer)
+	if err != nil {
+		panic(err)
+	}
+	if resp.ContentString() != "hello compress" {
+		t.Error(resp.ContentString())
+	}
+
+	ses = NewSession() //requests.NewSession()
+	ses.Config().SetContentEncoding(ContentEncodingGzip)
+	tp = ses.Get("http://0.0.0.0/content-compress")
+	tp.SetBodyJson(H{"key": "hello compress"})
+	resp, err = tp.TestExecute(TestServer)
+	if err != nil {
+		panic(err)
+	}
+	if resp.ContentString() != "hello compress" {
+		t.Error(resp.ContentString())
+	}
+
+	ses = NewSession() //requests.NewSession()
+	tp = ses.Get("http://0.0.0.0/content-compress")
+	tp.SetBodyJson(H{"key": "hello compress"})
+	resp, err = tp.TestExecute(TestServer)
+	if err != nil {
+		panic(err)
+	}
+	if resp.ContentString() != "error compress" {
+		t.Error(resp.ContentString())
+	}
+}
+
 func TestReadmeEg1_2(t *testing.T) {
 	ses := NewSession() //requests.NewSession()
 	tp := ses.Get("http://httpbin.org/anything")

@@ -22,21 +22,32 @@ type IsSetting struct {
 	isDecompressNoAccept bool
 }
 
-type CompressType int
+type AcceptEncodingType int
 
 const (
-	ContentEncodingNoCompress = 0
-	ContentEncodingGzip       = 1
-	ContentEncodingCompress   = 2
-	ContentEncodingDeflate    = 3
-	ContentEncodingBr         = 4
+	AcceptEncodingNoCompress AcceptEncodingType = 0
+	AcceptEncodingGzip       AcceptEncodingType = 1
+	// AcceptEncodingCompress   AcceptEncodingType = 2
+	AcceptEncodingDeflate AcceptEncodingType = 3
+	AcceptEncodingBr      AcceptEncodingType = 4
+)
+
+type ContentEncodingType int
+
+const (
+	ContentEncodingNoCompress ContentEncodingType = 0
+	ContentEncodingGzip       ContentEncodingType = 1
+	// ContentEncodingCompress   ContentEncodingType = 2
+	ContentEncodingDeflate ContentEncodingType = 3
+	ContentEncodingBr      ContentEncodingType = 4
 )
 
 // Session 的基本方法
 type Session struct {
 	auth *BasicAuth
 
-	compressType CompressType
+	acceptEncoding  []AcceptEncodingType
+	contentEncoding ContentEncodingType
 
 	client    *http.Client
 	cookiejar http.CookieJar
@@ -135,7 +146,7 @@ func NewSession() *Session {
 	}
 
 	client.Jar = cjar
-	return &Session{client: client, transport: transport, auth: nil, cookiejar: client.Jar, Header: make(http.Header), Is: IsSetting{true}, compressType: ContentEncodingNoCompress}
+	return &Session{client: client, transport: transport, auth: nil, cookiejar: client.Jar, Header: make(http.Header), Is: IsSetting{true}, acceptEncoding: []AcceptEncodingType{}, contentEncoding: ContentEncodingNoCompress}
 }
 
 // Config 配置Reqeusts类集合

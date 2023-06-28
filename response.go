@@ -2,12 +2,14 @@ package requests
 
 import (
 	"bytes"
+	"compress/flate"
 	"compress/gzip"
 	"compress/zlib"
 	"io"
 	"io/ioutil"
 	"net/http"
 
+	"github.com/andybalholm/brotli"
 	"github.com/tidwall/gjson"
 )
 
@@ -22,35 +24,60 @@ func FromHTTPResponse(resp *http.Response, isDecompressNoAccept bool) (*Response
 	var err error
 	var rbuf []byte
 
-	// 复制response 返回内容 并且测试是否有解压的需求
-	srcbuf, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	resp.Body.Close()
+	defer resp.Body.Close()
 
-	if isDecompressNoAccept { // 在某个已经遗忘的网页测试过, 为了兼容 Python requests
-		srcReader := bytes.NewReader(srcbuf)
-		var reader io.ReadCloser
-		if reader, err = gzip.NewReader(srcReader); err == nil {
-			defer reader.Close()
-			rbuf, err = ioutil.ReadAll(reader)
-			if err != nil {
-				return nil, err
+	ContentEncoding := resp.Header.Get("Content-Encoding")
+	switch ContentEncoding {
+	case "gzip":
+		r, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		rbuf, err = ioutil.ReadAll(r)
+		if err != nil {
+			return nil, err
+		}
+	case "deflate":
+		r := flate.NewReader(resp.Body)
+		rbuf, err = ioutil.ReadAll(r)
+		if err != nil {
+			return nil, err
+		}
+	case "br":
+		r := brotli.NewReader(resp.Body)
+		rbuf, err = ioutil.ReadAll(r)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		srcbuf, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		if isDecompressNoAccept { // 在某个已经遗忘的网页测试过, 为了兼容 Python requests
+			srcReader := bytes.NewReader(srcbuf)
+			var reader io.ReadCloser
+			if reader, err = gzip.NewReader(srcReader); err == nil {
+				defer reader.Close()
+				rbuf, err = ioutil.ReadAll(reader)
+				if err != nil {
+					return nil, err
+				}
+
+			} else if reader, err = zlib.NewReader(srcReader); err == nil {
+				defer reader.Close()
+				rbuf, err = ioutil.ReadAll(reader)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				rbuf = srcbuf
 			}
 
-		} else if reader, err = zlib.NewReader(srcReader); err == nil {
-			defer reader.Close()
-			rbuf, err = ioutil.ReadAll(reader)
-			if err != nil {
-				return nil, err
-			}
 		} else {
 			rbuf = srcbuf
 		}
-
-	} else {
-		rbuf = srcbuf
 	}
 
 	return &Response{readBytes: rbuf, readResponse: resp}, nil

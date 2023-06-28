@@ -89,9 +89,19 @@ func (cfg *Config) SetDecompressNoAccept(is bool) {
 	cfg.ses.Is.isDecompressNoAccept = is
 }
 
-// SetDecompressNoAccept 设置在没头文件情景下, 接受到压缩数据, 是否要解压. 类型python requests
-func (cfg *Config) SetCompress(ct CompressType) {
-	cfg.ses.compressType = ct
+// AddAcceptEncoding 设置接收压缩的类型
+func (cfg *Config) AddAcceptEncoding(ct AcceptEncodingType) {
+	cfg.ses.acceptEncoding = append(cfg.ses.acceptEncoding, ct)
+}
+
+// AddAcceptEncoding 设置接收压缩的类型
+func (cfg *Config) GetAcceptEncoding(ct AcceptEncodingType) []AcceptEncodingType {
+	return cfg.ses.acceptEncoding
+}
+
+// SetContentEncoding 设置发送数据body压缩的类型
+func (cfg *Config) SetContentEncoding(ct ContentEncodingType) {
+	cfg.ses.contentEncoding = ct
 }
 
 // SetConfig 设置配置

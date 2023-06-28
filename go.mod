@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/elazarl/goproxy/ext v0.0.0-20210801061803-8e322dfb79c4 // indirect
 	github.com/klauspost/compress v1.13.5 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
