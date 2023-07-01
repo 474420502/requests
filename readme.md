@@ -14,7 +14,7 @@ eg2:
 ```go
     ses := requests.NewSession() 
 	tp := ses.Get("http://httpbin.org/anything")
-	tp.SetBodyAuto(`{"a": 1, "b": 2}`)
+	tp.SetBodyJson(`{"a": 1, "b": 2}`)
 	resp, _ := tp.Execute()
 	log.Println(string(resp.Content()))
 	// {
@@ -39,7 +39,7 @@ eg2:
 	//   }
 
 	tp = ses.Get("http://httpbin.org/anything")
-	tp.SetBodyAuto(map[string]interface{}{"a": "1", "b": 2})
+	tp.SetBodyJson(map[string]interface{}{"a": "1", "b": 2})
 	resp, _ = tp.Execute()
 	log.Println(string(resp.Content()))
 	// {
@@ -64,7 +64,7 @@ eg2:
 	//   }
 
 	tp = ses.Post("http://httpbin.org/anything")
-	tp.SetBodyAuto("./tests/learn.js", TypeFormData)
+	tp.SetBodyFormData("./tests/learn.js")
 	resp, _ = tp.Execute()
 	log.Println(string(resp.Content()))
 	// {
