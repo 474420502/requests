@@ -17,12 +17,7 @@ func writeFormUploadFile(mwriter *multipart.Writer, ufile *UploadFile) {
 	if err != nil {
 		log.Panic(err)
 	}
-	io.Copy(part, ufile.FileReaderCloser)
-
-	err = ufile.FileReaderCloser.Close()
-	if err != nil {
-		panic(err)
-	}
+	io.Copy(part, ufile.FileReader)
 }
 
 // // *multipart.Writer 需要 Close()

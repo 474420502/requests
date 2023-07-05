@@ -2,7 +2,9 @@ package requests
 
 import (
 	"io"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/tidwall/gjson"
@@ -182,12 +184,72 @@ func TestBoundary(t *testing.T) {
 	}
 }
 
-func TestCaseCreateMultiPart(t *testing.T) {
-	// ufile, err := UploadFileFromPath("tests/json.file")
-	// if err != nil {
-	// 	t.Error(err)
-	// }
+func TestUploadFileFromPath(t *testing.T) {
+	// 创建一个临时文件
+	tempFile, err := ioutil.TempFile("", "testfile")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tempFile.Name())
 
-	// createMultipart(ufile, TypeFormData)
+	// 写入数据
+	content := []byte("Hello, World!")
+	if _, err := tempFile.Write(content); err != nil {
+		t.Fatal(err)
+	}
+	if err := tempFile.Close(); err != nil {
+		t.Fatal(err)
+	}
 
+	// 使用 UploadFileFromPath 测试
+	ufile, err := UploadFileFromPath(tempFile.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fileContent, err := ioutil.ReadAll(ufile.GetFile())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(fileContent) != string(content) {
+		t.Errorf("Expected file content %s, but got %s", string(content), string(fileContent))
+	}
+}
+
+func TestUploadFileFromGlob(t *testing.T) {
+	// 创建一个临时目录
+	tempDir, err := ioutil.TempDir("", "testdir")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// 在临时目录中创建两个文件
+	fileNames := []string{"file1.txt", "file2.txt"}
+	for _, fileName := range fileNames {
+		filePath := filepath.Join(tempDir, fileName)
+		if err := ioutil.WriteFile(filePath, []byte("Hello, World!"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// 使用 UploadFileFromGlob 测试
+	globPattern := filepath.Join(tempDir, "*.txt")
+	ufiles, err := UploadFileFromGlob(globPattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 检查返回的文件数
+	if len(ufiles) != len(fileNames) {
+		t.Errorf("Expected %d files, but got %d", len(fileNames), len(ufiles))
+	}
+
+	// 检查返回的文件名
+	for i, ufile := range ufiles {
+		expectedFileName := filepath.Base(fileNames[i])
+		if ufile.GetFileName() != expectedFileName {
+			t.Errorf("Expected file name %s, but got %s", expectedFileName, ufile.GetFileName())
+		}
+	}
 }
