@@ -265,6 +265,20 @@ func (ses *Session) Delete(url string) *Temporary {
 	return wf
 }
 
+// Connect 请求
+func (ses *Session) Connect(url string) *Temporary {
+	wf := NewTemporary(ses, url)
+	wf.Method = "CONNECT"
+	return wf
+}
+
+// Trace 请求
+func (ses *Session) Trace(url string) *Temporary {
+	wf := NewTemporary(ses, url)
+	wf.Method = "TRACE"
+	return wf
+}
+
 // // CloseIdleConnections  closes the idle connections that a session client may make use of
 // // 从levigross/grequests 借鉴
 // func (ses *Session) CloseIdleConnections() {

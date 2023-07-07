@@ -95,3 +95,7 @@ func buildBodyRequest(tp *Temporary) (*http.Request, error) {
 
 	return req, nil
 }
+
+func Get(url string) *Temporary {
+	return NewSession().Get(url)
+}
