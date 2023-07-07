@@ -336,7 +336,18 @@ func (tp *Temporary) SetBodyUrlencoded(params interface{}) *Temporary {
 func (tp *Temporary) SetBodyFormData(params ...interface{}) *Temporary {
 	defaultContentType := TypeFormData
 	var mwriter *multipart.Writer
-	tp.Body, mwriter = createMultipartEx(params...)
+	if len(params) == 1 {
+		if w, ok := params[0].(*multipart.Writer); ok {
+			mwriter = w
+		} else if w, ok := params[0].(multipart.Writer); ok {
+			mwriter = &w
+		}
+	}
+
+	if mwriter == nil {
+		tp.Body, mwriter = createMultipartEx(params...)
+	}
+
 	if mwriter != nil {
 		defaultContentType += ";boundary=" + mwriter.Boundary()
 	}

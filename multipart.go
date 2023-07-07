@@ -142,6 +142,7 @@ func writeFormUploadFile(mwriter *multipart.Writer, ufile *UploadFile) {
 
 // *multipart.Writer 需要 Close()
 func createMultipartEx(params ...interface{}) (*bytes.Buffer, *multipart.Writer) {
+
 	body := &bytes.Buffer{}
 	mwriter := multipart.NewWriter(body)
 
@@ -223,6 +224,8 @@ func createMultipartEx(params ...interface{}) (*bytes.Buffer, *multipart.Writer)
 					mwriter.WriteField(k, string(data))
 				}
 			}
+		case *multipart.Writer, multipart.Writer:
+			panic("only accept single (*)multipart.Writer")
 		default:
 			if reflect.TypeOf(param).ConvertibleTo(compatibleType) {
 				cparam := reflect.ValueOf(param).Convert(compatibleType)
