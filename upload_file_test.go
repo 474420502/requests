@@ -1,7 +1,6 @@
 package requests
 
 import (
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -122,8 +121,8 @@ func TestBoundary(t *testing.T) {
 	tp := ses.Post("http://httpbin.org/post")
 
 	mw := tp.CreateBodyMultipart()
-	mw.WriteField("key1", "haha")
-	mw.WriteField("key2", "xixi")
+	mw.AddField("key1", "haha")
+	mw.AddField("key2", "xixi")
 
 	// mw.AddField("key2", "xixi")
 	// data, err := ioutil.ReadAll(tp.Body)
@@ -132,6 +131,7 @@ func TestBoundary(t *testing.T) {
 	// 	t.Error(err)
 	// 	return
 	// }
+	tp.SetBodyFormData(mw)
 	resp, err := tp.Execute()
 	if err != nil {
 		t.Error(err)
@@ -153,8 +153,8 @@ func TestBoundary(t *testing.T) {
 	}
 
 	mw = tp.CreateBodyMultipart()
-	mw.WriteField("key1", "haha")
-	mw.WriteField("key2", "xixi")
+	mw.AddField("key1", "haha")
+	mw.AddField("key2", "xixi")
 
 	f, err := os.Open("./tests/learn.js")
 	if err != nil {
@@ -162,16 +162,13 @@ func TestBoundary(t *testing.T) {
 		return
 	}
 
-	writer, err := mw.CreateFormFile("filekey", "file0")
+	err = mw.AddFieldFile("filekey", "file0", f)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	_, err = io.Copy(writer, f)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+
+	tp.SetBodyFormData(mw)
 
 	resp, err = tp.Execute()
 	if err != nil {

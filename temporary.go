@@ -260,14 +260,57 @@ func (tp *Temporary) SetBody(body io.Reader) *Temporary {
 	return tp
 }
 
+type MultipartFormData struct {
+	data   bytes.Buffer
+	writer *multipart.Writer
+}
+
+func (mpfd *MultipartFormData) AddFieldFile(fieldname string, filename string, file io.Reader) error {
+	w, err := mpfd.writer.CreateFormFile(fieldname, filename)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(w, file)
+	return err
+}
+
+func (mpfd *MultipartFormData) AddField(fieldname string, value string) error {
+	return mpfd.writer.WriteField(fieldname, value)
+}
+
+func (mpfd *MultipartFormData) AddFieldBytes(fieldname string, buf []byte) error {
+	w, err := mpfd.writer.CreateFormField(fieldname)
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(buf)
+	return err
+}
+
+func (mpfd *MultipartFormData) SetBoundary(boundary string) error {
+	return mpfd.writer.SetBoundary(boundary)
+}
+
+func (mpfd *MultipartFormData) Boundary() string {
+	return mpfd.writer.Boundary()
+}
+
+func (mpfd *MultipartFormData) Close() error {
+	return mpfd.writer.Close()
+}
+
+func (mpfd *MultipartFormData) Data() *bytes.Buffer {
+	return &mpfd.data
+}
+
 // GetBodyMultipart if get multipart, body = NewBody.  使用multipart/form-data. 传递keyvalue. 传递file.
 // 每次都需要重置
-func (tp *Temporary) CreateBodyMultipart() *multipart.Writer {
-	var buf = &bytes.Buffer{}
-	tp.mwriter = multipart.NewWriter(buf)
-	tp.Header.Set(HeaderKeyContentType, tp.mwriter.FormDataContentType())
-	tp.Body = buf
-	return tp.mwriter
+func (tp *Temporary) CreateBodyMultipart() *MultipartFormData {
+
+	mpfd := &MultipartFormData{}
+	mpfd.writer = multipart.NewWriter(&mpfd.data)
+
+	return mpfd
 }
 
 // SetBodyUrlencoded Body FormData传参数. 推荐url.Values结构
@@ -337,10 +380,13 @@ func (tp *Temporary) SetBodyFormData(params ...interface{}) *Temporary {
 	defaultContentType := TypeFormData
 	var mwriter *multipart.Writer
 	if len(params) == 1 {
-		if w, ok := params[0].(*multipart.Writer); ok {
-			mwriter = w
-		} else if w, ok := params[0].(multipart.Writer); ok {
-			mwriter = &w
+		if w, ok := params[0].(*MultipartFormData); ok {
+			tp.Body = w.Data()
+			err := w.writer.Close()
+			if err != nil {
+				panic(err)
+			}
+			mwriter = w.writer
 		}
 	}
 
