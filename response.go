@@ -94,7 +94,7 @@ func (gresp *Response) Content() []byte {
 }
 
 // GetResponse  get golang http.Response
-func (gresp *Response) GetResponse() interface{} {
+func (gresp *Response) GetResponse() *http.Response {
 	return gresp.readResponse
 }
 
