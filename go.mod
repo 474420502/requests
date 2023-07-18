@@ -7,7 +7,7 @@ require (
 	github.com/elazarl/goproxy v0.0.0-20210801061803-8e322dfb79c4
 	github.com/schollz/progressbar v1.0.0
 	github.com/tidwall/gjson v1.12.0
-	golang.org/x/net v0.0.0-20211105192438-b53810dc28af
+	golang.org/x/net v0.12.0
 )
 
 require (

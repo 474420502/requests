@@ -1,12 +1,16 @@
 package requests
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
+	"net"
 	"net/http"
 	"net/url"
 	"reflect"
 	"time"
+
+	netproxy "golang.org/x/net/proxy"
 )
 
 // Config Set requests config
@@ -58,9 +62,29 @@ func (cfg *Config) SetProxy(proxy interface{}) {
 		if err != nil {
 			panic(err)
 		}
-		cfg.ses.transport.Proxy = http.ProxyURL(purl)
+		if purl.Scheme == "socks5" {
+			cfg.ses.transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+				dialer, err := netproxy.SOCKS5("tcp", purl.Host, nil, netproxy.Direct)
+				if err != nil {
+					return nil, err
+				}
+				return dialer.Dial(network, addr)
+			}
+		} else {
+			cfg.ses.transport.Proxy = http.ProxyURL(purl)
+		}
 	case *url.URL:
-		cfg.ses.transport.Proxy = http.ProxyURL(v)
+		if v.Scheme == "socks5" {
+			cfg.ses.transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+				dialer, err := netproxy.SOCKS5("tcp", v.Host, nil, netproxy.Direct)
+				if err != nil {
+					return nil, err
+				}
+				return dialer.Dial(network, addr)
+			}
+		} else {
+			cfg.ses.transport.Proxy = http.ProxyURL(v)
+		}
 	case nil:
 		cfg.ses.transport.Proxy = nil
 	default:
