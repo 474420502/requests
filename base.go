@@ -96,6 +96,47 @@ func buildBodyRequest(tp *Temporary) (*http.Request, error) {
 	return req, nil
 }
 
+// Head 请求
+func Head(url string) *Temporary {
+	return NewSession().Head(url)
+}
+
+// Get 请求
 func Get(url string) *Temporary {
 	return NewSession().Get(url)
+}
+
+// Post 请求
+func Post(url string) *Temporary {
+	return NewSession().Post(url)
+}
+
+// Put 请求
+func Put(url string) *Temporary {
+	return NewSession().Put(url)
+}
+
+// Patch 请求
+func Patch(url string) *Temporary {
+	return NewSession().Patch(url)
+}
+
+// Delete 请求
+func Delete(url string) *Temporary {
+	return NewSession().Delete(url)
+}
+
+// Connect 请求
+func Connect(url string) *Temporary {
+	return NewSession().Connect(url)
+}
+
+// Options 请求
+func Options(url string) *Temporary {
+	return NewSession().Options(url)
+}
+
+// Trace 请求
+func Trace(url string) *Temporary {
+	return NewSession().Trace(url)
 }
