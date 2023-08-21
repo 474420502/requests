@@ -217,11 +217,30 @@ func createMultipartEx(params ...interface{}) (*bytes.Buffer, *multipart.Writer)
 			}
 		case map[string]interface{}:
 			for k, v := range param {
-				data, err := json.Marshal(v)
-				if err != nil {
-					log.Println(err)
-				} else {
-					mwriter.WriteField(k, string(data))
+				switch v.(type) {
+				case map[string]interface{}, []interface{}, []map[string]interface{}:
+					data, err := json.Marshal(v)
+					if err != nil {
+						log.Println(err)
+					} else {
+						mwriter.WriteField(k, string(data))
+					}
+				default:
+					// TODO: 处理json的基础类型到 WriteField 要求都转字符串
+					var str string
+					switch t := v.(type) {
+					case int:
+						str = strconv.Itoa(t)
+					case float64:
+						str = strconv.FormatFloat(t, 'f', -1, 64)
+					case bool:
+						str = strconv.FormatBool(t)
+					case string:
+						str = t
+					default:
+						str = fmt.Sprintf("%v", t)
+					}
+					mwriter.WriteField(k, str)
 				}
 			}
 		case *multipart.Writer, multipart.Writer:
