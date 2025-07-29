@@ -508,7 +508,10 @@ func TestSession_SetHeader(t *testing.T) {
 
 func TestSession_SetBasicAuth(t *testing.T) {
 	ses := NewSession()
-	ses.Config().SetBasicAuth(&BasicAuth{User: "eson", Password: "123456"})
+	err := ses.Config().SetBasicAuth("eson", "123456")
+	if err != nil {
+		t.Error("SetBasicAuth failed:", err)
+	}
 	resp, err := ses.Get("http://httpbin.org/basic-auth/eson/123456").Execute()
 	if err != nil {
 		t.Error(err)
@@ -517,7 +520,7 @@ func TestSession_SetBasicAuth(t *testing.T) {
 		t.Error("code != 200, code = ", resp.GetStatus())
 	}
 
-	ses.Config().SetBasicAuth(&BasicAuth{User: "eson", Password: "12345"})
+	err = ses.Config().SetBasicAuth("eson", "12345")
 	resp, err = ses.Get("http://httpbin.org/basic-auth/eson/123456").Execute()
 	if err != nil {
 		t.Error(err)
@@ -537,6 +540,10 @@ func TestSession_SetBasicAuth(t *testing.T) {
 	}
 
 	ses.Config().SetBasicAuth("son", "123456")
+	err = ses.Config().SetBasicAuth("eson", "12345")
+	if err != nil {
+		t.Error("SetBasicAuth failed:", err)
+	}
 	resp, err = ses.Get("http://httpbin.org/basic-auth/eson/123456").Execute()
 	if err != nil {
 		t.Error(err)
@@ -545,7 +552,7 @@ func TestSession_SetBasicAuth(t *testing.T) {
 		t.Error("code != 401, code = ", resp.GetStatus())
 	}
 
-	ses.Config().SetBasicAuth(nil)
+	ses.Config().ClearBasicAuth() // 使用ClearBasicAuth代替nil
 	resp, err = ses.Get("http://httpbin.org/basic-auth/eson/123456").Execute()
 	if err != nil {
 		t.Error(err)

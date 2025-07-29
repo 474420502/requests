@@ -185,3 +185,211 @@ func (r *Request) WithMiddlewares(middlewares ...Middleware) *RequestWithMiddlew
 		middlewares: middlewares,
 	}
 }
+
+// MetricsMiddleware 指标收集中间件
+type MetricsMiddleware struct {
+	RequestCounter  func(method, url string)
+	ResponseCounter func(statusCode int, method, url string)
+	DurationTracker func(duration time.Duration, method, url string)
+	startTime       time.Time
+}
+
+func (m *MetricsMiddleware) BeforeRequest(req *http.Request) error {
+	m.startTime = time.Now()
+	if m.RequestCounter != nil {
+		m.RequestCounter(req.Method, req.URL.String())
+	}
+	return nil
+}
+
+func (m *MetricsMiddleware) AfterResponse(resp *http.Response) error {
+	duration := time.Since(m.startTime)
+
+	if m.ResponseCounter != nil {
+		m.ResponseCounter(resp.StatusCode, resp.Request.Method, resp.Request.URL.String())
+	}
+
+	if m.DurationTracker != nil {
+		m.DurationTracker(duration, resp.Request.Method, resp.Request.URL.String())
+	}
+
+	return nil
+}
+
+// CacheMiddleware 缓存中间件
+type CacheMiddleware struct {
+	Cache map[string]*CacheEntry
+}
+
+type CacheEntry struct {
+	Response  *http.Response
+	ExpiresAt time.Time
+}
+
+func NewCacheMiddleware() *CacheMiddleware {
+	return &CacheMiddleware{
+		Cache: make(map[string]*CacheEntry),
+	}
+}
+
+func (m *CacheMiddleware) BeforeRequest(req *http.Request) error {
+	// 只缓存GET请求
+	if req.Method != http.MethodGet {
+		return nil
+	}
+
+	key := req.URL.String()
+	if entry, exists := m.Cache[key]; exists {
+		if time.Now().Before(entry.ExpiresAt) {
+			// 缓存命中且未过期
+			// 这里需要一个机制来返回缓存的响应
+			// 实际实现中可能需要修改接口设计
+		}
+	}
+
+	return nil
+}
+
+func (m *CacheMiddleware) AfterResponse(resp *http.Response) error {
+	// 只缓存GET请求的200响应
+	if resp.Request.Method != http.MethodGet || resp.StatusCode != http.StatusOK {
+		return nil
+	}
+
+	// 检查Cache-Control头
+	cacheControl := resp.Header.Get("Cache-Control")
+	if cacheControl == "no-cache" || cacheControl == "no-store" {
+		return nil
+	}
+
+	key := resp.Request.URL.String()
+	m.Cache[key] = &CacheEntry{
+		Response:  resp,
+		ExpiresAt: time.Now().Add(5 * time.Minute), // 默认5分钟过期
+	}
+
+	return nil
+}
+
+// RequestIDMiddleware 请求ID中间件
+type RequestIDMiddleware struct {
+	Generator func() string
+}
+
+func (m *RequestIDMiddleware) BeforeRequest(req *http.Request) error {
+	if m.Generator != nil {
+		requestID := m.Generator()
+		req.Header.Set("X-Request-ID", requestID)
+	}
+	return nil
+}
+
+func (m *RequestIDMiddleware) AfterResponse(resp *http.Response) error {
+	return nil
+}
+
+// TimeoutMiddleware 超时中间件（基于Context）
+type TimeoutMiddleware struct {
+	Timeout time.Duration
+}
+
+func (m *TimeoutMiddleware) BeforeRequest(req *http.Request) error {
+	if m.Timeout > 0 {
+		ctx, cancel := context.WithTimeout(req.Context(), m.Timeout)
+		// 注意：这里需要确保cancel被调用，但在当前架构下比较困难
+		// 实际使用中可能需要调整接口设计
+		_ = cancel
+		*req = *req.WithContext(ctx)
+	}
+	return nil
+}
+
+func (m *TimeoutMiddleware) AfterResponse(resp *http.Response) error {
+	return nil
+}
+
+// CircuitBreakerMiddleware 熔断器中间件
+type CircuitBreakerMiddleware struct {
+	FailureThreshold int
+	ResetTimeout     time.Duration
+
+	failures    int
+	lastFailure time.Time
+	state       CircuitState
+}
+
+type CircuitState int
+
+const (
+	CircuitClosed CircuitState = iota
+	CircuitOpen
+	CircuitHalfOpen
+)
+
+func NewCircuitBreakerMiddleware(failureThreshold int, resetTimeout time.Duration) *CircuitBreakerMiddleware {
+	return &CircuitBreakerMiddleware{
+		FailureThreshold: failureThreshold,
+		ResetTimeout:     resetTimeout,
+		state:            CircuitClosed,
+	}
+}
+
+func (m *CircuitBreakerMiddleware) BeforeRequest(req *http.Request) error {
+	switch m.state {
+	case CircuitOpen:
+		if time.Since(m.lastFailure) > m.ResetTimeout {
+			m.state = CircuitHalfOpen
+		} else {
+			return fmt.Errorf("circuit breaker is open")
+		}
+	case CircuitHalfOpen:
+		// 允许一个请求通过
+	case CircuitClosed:
+		// 正常状态，允许请求
+	}
+
+	return nil
+}
+
+func (m *CircuitBreakerMiddleware) AfterResponse(resp *http.Response) error {
+	if resp.StatusCode >= 500 {
+		m.failures++
+		m.lastFailure = time.Now()
+
+		if m.failures >= m.FailureThreshold {
+			m.state = CircuitOpen
+		}
+	} else {
+		// 成功响应，重置失败计数
+		m.failures = 0
+		if m.state == CircuitHalfOpen {
+			m.state = CircuitClosed
+		}
+	}
+
+	return nil
+}
+
+// UserAgentRotationMiddleware 用户代理轮换中间件
+type UserAgentRotationMiddleware struct {
+	UserAgents []string
+	current    int
+}
+
+func NewUserAgentRotationMiddleware(userAgents []string) *UserAgentRotationMiddleware {
+	return &UserAgentRotationMiddleware{
+		UserAgents: userAgents,
+	}
+}
+
+func (m *UserAgentRotationMiddleware) BeforeRequest(req *http.Request) error {
+	if len(m.UserAgents) > 0 {
+		req.Header.Set("User-Agent", m.UserAgents[m.current])
+		m.current = (m.current + 1) % len(m.UserAgents)
+	}
+	return nil
+}
+
+func (m *UserAgentRotationMiddleware) AfterResponse(resp *http.Response) error {
+	return nil
+}

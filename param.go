@@ -1,6 +1,10 @@
 package requests
 
 // IParam Param接口
+// Deprecated: 这个复杂的参数接口系统已废弃。
+// 对于查询参数，请使用类型安全的 AddQueryInt, AddQueryBool, AddQueryFloat 等方法。
+// 对于路径参数，请使用 SetPathParam 和 SetPathParams 方法。
+// 这些新方法更简单、更安全，且提供更好的开发体验。
 type IParam interface {
 	Set(v interface{})
 	Add(v interface{}) error

@@ -197,8 +197,103 @@ func demonstrateTypeSafeConfig() {
 	fmt.Println("现在配置方法都是类型安全的，减少了运行时错误的可能性")
 }
 
-func main() {
-	demonstrateImprovedAPIv2()
-	fmt.Println()
-	demonstrateTypeSafeConfig()
+func demonstratePhase2Improvements() {
+	fmt.Println("=== 第二阶段改进：现代化API与增强功能 ===")
+
+	session := requests.NewSession()
+
+	// 1. 演示增强的JSON处理
+	fmt.Println("1. 增强的JSON处理:")
+	resp, err := session.Get("https://httpbin.org/get").
+		AddQueryInt("count", 10).
+		AddQueryBool("active", true).
+		Execute()
+
+	if err != nil {
+		fmt.Printf("✗ 请求失败: %v\n", err)
+	} else {
+		// 使用新的类型安全JSON方法
+		if resp.IsJSON() {
+			fmt.Println("✓ 响应确认为JSON格式")
+
+			// 类型安全的字段获取
+			if url, err := resp.GetJSONString("url"); err == nil {
+				fmt.Printf("✓ 获取URL字段: %s\n", url)
+			}
+
+			// 获取查询参数中的数值
+			if count, err := resp.GetJSONInt("args.count"); err == nil {
+				fmt.Printf("✓ 获取count参数: %d\n", count)
+			}
+
+			if active, err := resp.GetJSONBool("args.active"); err == nil {
+				fmt.Printf("✓ 获取active参数: %t\n", active)
+			}
+		}
+	}
+
+	// 2. 演示现代化的表单处理
+	fmt.Println("\n2. 现代化的表单处理:")
+
+	// 类型安全的表单字段
+	resp, err = session.Post("https://httpbin.org/post").
+		AddFormFieldInt("user_id", 12345).
+		AddFormFieldFloat("score", 98.5).
+		AddFormFieldBool("verified", true).
+		AddFormField("name", "测试用户").
+		Execute()
+
+	if err != nil {
+		fmt.Printf("✗ 表单请求失败: %v\n", err)
+	} else {
+		fmt.Printf("✓ 类型安全表单提交成功，状态码: %d\n", resp.GetStatusCode())
+	}
+
+	// 3. 演示混合类型表单
+	fmt.Println("\n3. 混合类型表单:")
+	formData := map[string]interface{}{
+		"name":     "张三",
+		"age":      28,
+		"height":   175.5,
+		"verified": true,
+	}
+
+	resp, err = session.Post("https://httpbin.org/post").
+		SetFormFieldsTyped(formData).
+		Execute()
+
+	if err != nil {
+		fmt.Printf("✗ 混合表单请求失败: %v\n", err)
+	} else {
+		fmt.Printf("✓ 混合类型表单提交成功，状态码: %d\n", resp.GetStatusCode())
+	}
+
+	// 4. 演示废弃旧API，推荐新API
+	fmt.Println("\n4. API现代化（旧API已标记为Deprecated）:")
+
+	req := session.Get("https://httpbin.org/get")
+
+	// 新的推荐方式（类型安全）
+	req.AddQueryInt("page", 1).
+		AddQueryBool("debug", false).
+		AddQueryFloat("version", 2.1)
+
+	fmt.Println("✓ 推荐使用类型安全的AddQueryInt/Bool/Float方法")
+	fmt.Println("✗ 不再推荐使用req.QueryParam(\"key\").IntSet(value)的复杂方式")
+
+	resp, err = req.Execute()
+	if err != nil {
+		fmt.Printf("✗ 现代化API请求失败: %v\n", err)
+	} else {
+		fmt.Printf("✓ 现代化API请求成功，状态码: %d\n", resp.GetStatusCode())
+	}
+
+	fmt.Println("\n=== 第二阶段改进总结 ===")
+	fmt.Println("✓ 废弃了复杂的IParam接口系统")
+	fmt.Println("✓ 提供了类型安全的AddQuery*系列方法")
+	fmt.Println("✓ 提供了类型安全的AddFormField*系列方法")
+	fmt.Println("✓ 增强了JSON处理：IsJSON, GetJSONString/Int/Bool/Float等方法")
+	fmt.Println("✓ 支持混合类型表单：SetFormFieldsTyped方法")
+	fmt.Println("✓ 全面推行错误处理，减少panic的可能性")
+	fmt.Println("✓ API更加直观，减少了学习成本")
 }

@@ -17,48 +17,17 @@ type Config struct {
 	ses *Session
 }
 
-// SetBasicAuth 设置基础认证，支持多种参数形式以保持向后兼容性
-func (cfg *Config) SetBasicAuth(args ...interface{}) error {
+// SetBasicAuth 设置基础认证（支持向后兼容的error返回）
+func (cfg *Config) SetBasicAuth(user, password string) error {
 	if cfg.ses.auth == nil {
 		cfg.ses.auth = &BasicAuth{}
 	}
-
-	switch len(args) {
-	case 1:
-		switch v := args[0].(type) {
-		case *BasicAuth:
-			if v == nil {
-				cfg.ses.auth = nil
-			} else {
-				cfg.ses.auth.User = v.User
-				cfg.ses.auth.Password = v.Password
-			}
-		case BasicAuth:
-			cfg.ses.auth.User = v.User
-			cfg.ses.auth.Password = v.Password
-		case nil:
-			cfg.ses.auth = nil
-		default:
-			return fmt.Errorf("unsupported basic auth type: %T", v)
-		}
-	case 2:
-		user, ok := args[0].(string)
-		if !ok {
-			return fmt.Errorf("first argument must be string, got %T", args[0])
-		}
-		password, ok := args[1].(string)
-		if !ok {
-			return fmt.Errorf("second argument must be string, got %T", args[1])
-		}
-		cfg.ses.auth.User = user
-		cfg.ses.auth.Password = password
-	default:
-		return fmt.Errorf("invalid number of arguments: %d", len(args))
-	}
+	cfg.ses.auth.User = user
+	cfg.ses.auth.Password = password
 	return nil
 }
 
-// SetBasicAuthString 设置基础认证（推荐的类型安全方法）
+// SetBasicAuthString 设置基础认证（类型安全方法，不返回error）
 func (cfg *Config) SetBasicAuthString(user, password string) {
 	if cfg.ses.auth == nil {
 		cfg.ses.auth = &BasicAuth{}
@@ -67,50 +36,56 @@ func (cfg *Config) SetBasicAuthString(user, password string) {
 	cfg.ses.auth.Password = password
 }
 
+// SetBasicAuthStruct 使用BasicAuth结构体设置认证
+func (cfg *Config) SetBasicAuthStruct(auth *BasicAuth) {
+	if auth == nil {
+		cfg.ses.auth = nil
+	} else {
+		if cfg.ses.auth == nil {
+			cfg.ses.auth = &BasicAuth{}
+		}
+		cfg.ses.auth.User = auth.User
+		cfg.ses.auth.Password = auth.Password
+	}
+}
+
 // ClearBasicAuth 清除基础认证
 func (cfg *Config) ClearBasicAuth() {
 	cfg.ses.auth = nil
 }
 
-// SetBasicAuthLegacy 可以 User, Password or *BasicAuth or BasicAuth or nil(clear)
-// Deprecated: 使用 SetBasicAuth(user, password string) 或 ClearBasicAuth() 代替
-func (cfg *Config) SetBasicAuthLegacy(values ...interface{}) error {
-	if cfg.ses.auth == nil {
-		cfg.ses.auth = &BasicAuth{}
-	}
-
-	switch len(values) {
-	case 1:
-		switch v := values[0].(type) {
+// SetBasicAuthLegacy 支持多种参数形式的遗留方法
+// Deprecated: 使用 SetBasicAuth(user, password string) 或 SetBasicAuthStruct(*BasicAuth) 代替
+func (cfg *Config) SetBasicAuthLegacy(args ...interface{}) error {
+	if len(args) == 1 {
+		switch v := args[0].(type) {
 		case *BasicAuth:
-			cfg.ses.auth.User = v.User
-			cfg.ses.auth.Password = v.Password
+			cfg.SetBasicAuthStruct(v)
+			return nil
 		case BasicAuth:
-			cfg.ses.auth.User = v.User
-			cfg.ses.auth.Password = v.Password
+			cfg.SetBasicAuthStruct(&v)
+			return nil
 		case nil:
-			cfg.ses.auth = nil
+			cfg.ClearBasicAuth()
+			return nil
 		default:
 			return fmt.Errorf("unsupported basic auth type: %T", v)
 		}
-	case 2:
-		user, ok := values[0].(string)
+	} else if len(args) == 2 {
+		user, ok := args[0].(string)
 		if !ok {
-			return fmt.Errorf("first argument must be string, got %T", values[0])
+			return fmt.Errorf("first argument must be string, got %T", args[0])
 		}
-		password, ok := values[1].(string)
+		password, ok := args[1].(string)
 		if !ok {
-			return fmt.Errorf("second argument must be string, got %T", values[1])
+			return fmt.Errorf("second argument must be string, got %T", args[1])
 		}
-		cfg.ses.auth.User = user
-		cfg.ses.auth.Password = password
-	default:
-		return fmt.Errorf("invalid number of arguments: %d", len(values))
+		return cfg.SetBasicAuth(user, password)
 	}
-	return nil
+	return fmt.Errorf("invalid number of arguments: %d", len(args))
 }
 
-// SetTLSConfig 默认 string or *url.URL or nil
+// SetTLSConfig 设置TLS配置
 func (cfg *Config) SetTLSConfig(tlsconfig *tls.Config) {
 	cfg.ses.transport.TLSClientConfig = tlsconfig
 }
@@ -120,19 +95,16 @@ func (cfg *Config) SetInsecure(is bool) {
 	cfg.ses.transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: is}
 }
 
-// SetProxy 设置代理，返回error而不是panic
+// SetProxy 设置代理（支持多种类型以保持向后兼容）
+// Deprecated: 使用 SetProxyString(proxyURL string) 代替以获得更好的类型安全性
 func (cfg *Config) SetProxy(proxy interface{}) error {
 	switch v := proxy.(type) {
 	case string:
-		purl, err := url.Parse(v)
-		if err != nil {
-			return fmt.Errorf("invalid proxy URL: %w", err)
-		}
-		return cfg.setProxyURL(purl)
+		return cfg.SetProxyString(v)
 	case *url.URL:
 		return cfg.setProxyURL(v)
 	case nil:
-		cfg.ses.transport.Proxy = nil
+		cfg.ClearProxy()
 		return nil
 	default:
 		return fmt.Errorf("unsupported proxy type: %T", v)
@@ -209,15 +181,16 @@ func (cfg *Config) SetContentEncoding(ct ContentEncodingType) {
 	cfg.ses.contentEncoding = ct
 }
 
-// SetTimeout 设置超时时间，返回error而不是panic
+// SetTimeout 设置超时时间（支持多种类型以保持向后兼容）
+// Deprecated: 使用 SetTimeoutDuration(time.Duration) 或 SetTimeoutSeconds(int) 代替以获得更好的类型安全性
 func (cfg *Config) SetTimeout(t interface{}) error {
 	switch v := t.(type) {
 	case time.Duration:
-		cfg.ses.client.Timeout = v
+		cfg.SetTimeoutDuration(v)
 	case int:
-		cfg.ses.client.Timeout = time.Duration(v * int(time.Second))
+		cfg.SetTimeoutSeconds(v)
 	case int64:
-		cfg.ses.client.Timeout = time.Duration(v * int64(time.Second))
+		cfg.SetTimeoutSeconds(int(v))
 	case float32:
 		cfg.ses.client.Timeout = time.Duration(v * float32(time.Second))
 	case float64:

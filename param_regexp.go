@@ -8,7 +8,10 @@ import (
 	"strconv"
 )
 
-// ParamPath 参数
+// ParamRegexp 参数
+// Deprecated: 这个复杂的正则参数处理器已废弃。
+// 对于路径参数，请使用 SetPathParam 和 SetPathParams 方法。
+// 例如：req.SetPathParam("id", "123") 代替复杂的正则表达式处理。
 type ParamRegexp struct {
 	req      *Request // 直接引用Request而不是Temporary
 	Key      string   // 正则的Group

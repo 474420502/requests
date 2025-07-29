@@ -1,6 +1,7 @@
 package requests
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/cookiejar"
@@ -62,6 +63,10 @@ type Session struct {
 
 	// middlewares 中间件列表
 	middlewares []Middleware
+
+	// 第三阶段增强功能
+	defaultContext context.Context // 默认上下文
+	retryConfig    *RetryConfig    // 重试配置
 }
 
 const (
@@ -136,7 +141,7 @@ const (
 	CIsDecompressNoAccept
 )
 
-// NewSession 创建Session
+// NewSession 创建Session（向后兼容）
 func NewSession() *Session {
 	client := &http.Client{}
 	transport := &http.Transport{DisableCompression: true, DisableKeepAlives: true}
@@ -162,7 +167,32 @@ func NewSession() *Session {
 		Is:              IsSetting{true},
 		acceptEncoding:  []AcceptEncodingType{},
 		contentEncoding: ContentEncodingNoCompress,
+		defaultContext:  context.Background(),
+		middlewares:     []Middleware{},
 	}
+}
+
+// GetDefaultContext 获取默认上下文
+func (ses *Session) GetDefaultContext() context.Context {
+	if ses.defaultContext == nil {
+		return context.Background()
+	}
+	return ses.defaultContext
+}
+
+// SetDefaultContext 设置默认上下文
+func (ses *Session) SetDefaultContext(ctx context.Context) {
+	ses.defaultContext = ctx
+}
+
+// GetRetryConfig 获取重试配置
+func (ses *Session) GetRetryConfig() *RetryConfig {
+	return ses.retryConfig
+}
+
+// ClearMiddlewares 清除所有中间件
+func (ses *Session) ClearMiddlewares() {
+	ses.middlewares = []Middleware{}
 }
 
 // Config 配置Reqeusts类集合

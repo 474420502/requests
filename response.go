@@ -6,9 +6,11 @@ import (
 	"compress/gzip"
 	"compress/zlib"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/andybalholm/brotli"
 	"github.com/tidwall/gjson"
@@ -137,4 +139,68 @@ func (gresp *Response) UnmarshalJSON(v interface{}) error {
 // BindJSON UnmarshalJSON的别名，更符合现代Go API命名习惯
 func (gresp *Response) BindJSON(v interface{}) error {
 	return gresp.UnmarshalJSON(v)
+}
+
+// IsJSON 检查响应是否为JSON类型
+func (gresp *Response) IsJSON() bool {
+	contentType := gresp.readResponse.Header.Get("Content-Type")
+	return strings.Contains(contentType, "application/json") || strings.Contains(contentType, "text/json")
+}
+
+// GetJSONField 获取JSON中的特定字段值（使用gjson）
+func (gresp *Response) GetJSONField(path string) gjson.Result {
+	return gjson.GetBytes(gresp.readBytes, path)
+}
+
+// GetJSONString 获取JSON中的字符串字段
+func (gresp *Response) GetJSONString(path string) (string, error) {
+	result := gjson.GetBytes(gresp.readBytes, path)
+	if !result.Exists() {
+		return "", fmt.Errorf("JSON field '%s' does not exist", path)
+	}
+	return result.String(), nil
+}
+
+// GetJSONInt 获取JSON中的整数字段
+func (gresp *Response) GetJSONInt(path string) (int64, error) {
+	result := gjson.GetBytes(gresp.readBytes, path)
+	if !result.Exists() {
+		return 0, fmt.Errorf("JSON field '%s' does not exist", path)
+	}
+	if result.Type != gjson.Number {
+		return 0, fmt.Errorf("JSON field '%s' is not a number", path)
+	}
+	return result.Int(), nil
+}
+
+// GetJSONFloat 获取JSON中的浮点数字段
+func (gresp *Response) GetJSONFloat(path string) (float64, error) {
+	result := gjson.GetBytes(gresp.readBytes, path)
+	if !result.Exists() {
+		return 0, fmt.Errorf("JSON field '%s' does not exist", path)
+	}
+	if result.Type != gjson.Number {
+		return 0, fmt.Errorf("JSON field '%s' is not a number", path)
+	}
+	return result.Float(), nil
+}
+
+// GetJSONBool 获取JSON中的布尔字段
+func (gresp *Response) GetJSONBool(path string) (bool, error) {
+	result := gjson.GetBytes(gresp.readBytes, path)
+	if !result.Exists() {
+		return false, fmt.Errorf("JSON field '%s' does not exist", path)
+	}
+	if result.Type != gjson.True && result.Type != gjson.False {
+		return false, fmt.Errorf("JSON field '%s' is not a boolean", path)
+	}
+	return result.Bool(), nil
+}
+
+// MustBindJSON 绑定JSON，如果失败则panic（用于必须成功的场景）
+// Deprecated: 推荐使用 BindJSON 方法并适当处理错误
+func (gresp *Response) MustBindJSON(v interface{}) {
+	if err := gresp.BindJSON(v); err != nil {
+		panic(fmt.Sprintf("MustBindJSON failed: %v", err))
+	}
 }

@@ -8,6 +8,9 @@ import (
 // import "strconv"
 
 // ParamQuery 参数
+// Deprecated: 这个复杂的查询参数处理器已废弃。
+// 请使用 Request 的类型安全方法：AddQueryInt, AddQueryBool, AddQueryFloat 等。
+// 例如：req.AddQueryInt("page", 1) 代替 req.QueryParam("page").IntSet(1)
 type ParamQuery struct {
 	req *Request // 直接引用Request而不是Temporary
 	Key string

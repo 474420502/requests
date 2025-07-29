@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -45,7 +47,7 @@ func NewRequest(session *Session, method, urlStr string) *Request {
 		method:  method,
 		header:  make(http.Header),
 		cookies: make(map[string]*http.Cookie),
-		ctx:     context.Background(),
+		ctx:     session.GetDefaultContext(), // 使用Session的默认上下文
 		// 继承Session的中间件
 		middlewares: append([]Middleware{}, session.middlewares...),
 	}
@@ -463,18 +465,21 @@ func (r *Request) SetURLPath(path []string) *Request {
 }
 
 // QueryParam 获取查询参数处理器
+// Deprecated: 使用类型安全的 AddQuery* 方法系列代替，如 AddQueryInt, AddQueryBool 等
 func (r *Request) QueryParam(key string) IParam {
 	// 直接传递Request引用，无需创建Temporary
 	return &ParamQuery{req: r, Key: key}
 }
 
 // PathParam 路径参数处理器
+// Deprecated: 使用 SetPathParam 和 SetPathParams 方法代替，它们更简单且类型安全
 func (r *Request) PathParam(regexpGroup string) IParam {
 	// 直接传递Request引用，无需创建Temporary
 	return extractorParam(r, regexpGroup, r.parsedURL.Path)
 }
 
 // HostParam 主机参数处理器
+// Deprecated: 复杂的正则参数处理已废弃，使用直接的URL操作方法
 func (r *Request) HostParam(regexpGroup string) IParam {
 	// 直接传递Request引用，无需创建Temporary
 	return extractorParam(r, regexpGroup, r.parsedURL.Host)
@@ -725,6 +730,112 @@ func (r *Request) AddFormFile(fieldName, fileName string, reader io.Reader) *Req
 	}
 
 	return r.SetBodyFormFiles(file)
+}
+
+// AddFormField 添加单个表单字段
+func (r *Request) AddFormField(name, value string) *Request {
+	if r.err != nil {
+		return r
+	}
+
+	file := FormFile{
+		FieldName: name,
+		FileName:  "", // 空文件名表示这是一个表单字段
+		Reader:    strings.NewReader(value),
+	}
+
+	return r.SetBodyFormFiles(file)
+}
+
+// AddFormFieldInt 添加整数表单字段
+func (r *Request) AddFormFieldInt(name string, value int) *Request {
+	return r.AddFormField(name, strconv.Itoa(value))
+}
+
+// AddFormFieldInt64 添加int64表单字段
+func (r *Request) AddFormFieldInt64(name string, value int64) *Request {
+	return r.AddFormField(name, strconv.FormatInt(value, 10))
+}
+
+// AddFormFieldBool 添加布尔表单字段
+func (r *Request) AddFormFieldBool(name string, value bool) *Request {
+	return r.AddFormField(name, strconv.FormatBool(value))
+}
+
+// AddFormFieldFloat 添加浮点数表单字段
+func (r *Request) AddFormFieldFloat(name string, value float64) *Request {
+	return r.AddFormField(name, strconv.FormatFloat(value, 'f', -1, 64))
+}
+
+// SetFormFieldsTyped 设置类型化的表单字段
+func (r *Request) SetFormFieldsTyped(fields map[string]interface{}) *Request {
+	if r.err != nil {
+		return r
+	}
+
+	var files []FormFile
+	for key, value := range fields {
+		var stringValue string
+		switch v := value.(type) {
+		case string:
+			stringValue = v
+		case int:
+			stringValue = strconv.Itoa(v)
+		case int64:
+			stringValue = strconv.FormatInt(v, 10)
+		case float64:
+			stringValue = strconv.FormatFloat(v, 'f', -1, 64)
+		case bool:
+			stringValue = strconv.FormatBool(v)
+		default:
+			r.err = fmt.Errorf("unsupported form field type for key '%s': %T", key, value)
+			return r
+		}
+
+		files = append(files, FormFile{
+			FieldName: key,
+			FileName:  "", // 空文件名表示这是一个表单字段
+			Reader:    strings.NewReader(stringValue),
+		})
+	}
+
+	return r.SetBodyFormFiles(files...)
+}
+
+// SetFormFileFromPath 从文件路径添加表单文件
+func (r *Request) SetFormFileFromPath(fieldName, filePath string) *Request {
+	if r.err != nil {
+		return r
+	}
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		r.err = fmt.Errorf("failed to open file '%s': %w", filePath, err)
+		return r
+	}
+	// 注意：这里不关闭文件，因为它将在请求执行时被读取
+	// 用户需要自己管理文件的关闭
+
+	fileName := filepath.Base(filePath)
+	return r.AddFormFile(fieldName, fileName, file)
+}
+
+// AddMultipleFormFiles 批量添加表单文件
+func (r *Request) AddMultipleFormFiles(files map[string]io.Reader) *Request {
+	if r.err != nil {
+		return r
+	}
+
+	var formFiles []FormFile
+	for fieldName, reader := range files {
+		formFiles = append(formFiles, FormFile{
+			FieldName: fieldName,
+			FileName:  fieldName + ".dat", // 默认文件名
+			Reader:    reader,
+		})
+	}
+
+	return r.SetBodyFormFiles(formFiles...)
 }
 
 // SetBodyFormData 设置多部分表单数据（兼容Temporary，但简化实现）

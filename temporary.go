@@ -2,93 +2,109 @@ package requests
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"io"
-	"log"
-	"mime/multipart"
 	"net/http"
-	"net/http/httptest"
 	"net/url"
-	"regexp"
-	"strconv"
+	"strings"
 )
 
-// Temporary    这个并不影响Session的属性变化
+// Temporary 兼容性结构，现在内部使用Request实现
+// Deprecated: 使用 Request 代替。Temporary将在未来版本中移除。
 type Temporary struct {
-	session *Session
+	req *Request // 内部使用Request实现
 
-	acceptEncoding  []AcceptEncodingType
-	contentEncoding ContentEncodingType
-	// mwriter   *MultipartWriter
-	mwriter   *multipart.Writer
+	// 向后兼容性字段 - 这些字段现在主要是占位符，用于保持API兼容
+	session   *Session
 	ParsedURL *url.URL
 	Method    string
 	Body      *bytes.Buffer
 	Header    http.Header
 	Cookies   map[string]*http.Cookie
-	FloatPrec int // default = 2, if url.Values Contains the type of float, will FormatFloat(,,prec,)
+	FloatPrec int
+	err       error
 
-	// 错误处理：在链式调用中累积错误
-	err error
+	// 兼容性字段
+	acceptEncoding  []AcceptEncodingType
+	contentEncoding ContentEncodingType
+	mwriter         interface{} // 不再使用，保留以避免编译错误
 }
 
-// NewTemporary new and init Temporary
+// NewTemporary 创建新的Temporary对象，内部使用Request
+// Deprecated: 使用 session.Get/Post/etc 方法代替，它们返回 *Request
 func NewTemporary(ses *Session, urlstr string) *Temporary {
-	tp := &Temporary{session: ses}
+	req := NewRequest(ses, "GET", urlstr) // 默认GET，后续会被SetMethod覆盖
 
-	purl, err := url.ParseRequestURI(urlstr)
-	if err != nil {
-		tp.err = err
+	tp := &Temporary{
+		req:       req,
+		session:   ses,
+		Header:    make(http.Header),
+		Cookies:   make(map[string]*http.Cookie),
+		FloatPrec: 2,
+	}
+
+	// 如果URL解析失败，记录错误
+	if req.err != nil {
+		tp.err = req.err
 		return tp
 	}
-	tp.ParsedURL = purl
 
-	tp.Header = make(http.Header)
-	tp.Cookies = make(map[string]*http.Cookie)
-	tp.FloatPrec = 2
+	tp.ParsedURL = req.parsedURL
+	tp.Method = req.method
+
 	return tp
 }
 
-// SetContentType 设置set ContentType
+// 将Temporary的方法重定向到内部的Request实现
+// 这样可以保持API兼容性，同时内部使用统一的Request实现
+
 func (tp *Temporary) SetContentType(contentType string) {
-	tp.Header.Set(HeaderKeyContentType, contentType)
+	if tp.req != nil {
+		tp.req.SetContentType(contentType)
+	}
+	tp.Header.Set("Content-Type", contentType) // 兼容性
 }
 
-// AddHeader 添加头信息  Get方法从Header参数上获取 必须符合规范 HaHa -> Haha 如果真要HaHa,只能这样 Ha-Ha
 func (tp *Temporary) AddHeader(key, value string) *Temporary {
-	tp.Header[key] = append(tp.Header[key], value)
+	if tp.req != nil {
+		tp.req.AddHeader(key, value)
+	}
+	tp.Header.Add(key, value) // 兼容性
 	return tp
 }
 
-// SetHeader 设置完全替换原有Header 必须符合规范 HaHa -> Haha 如果真要HaHa,只能这样 Ha-Ha
 func (tp *Temporary) SetHeader(header http.Header) *Temporary {
+	if tp.req != nil {
+		tp.req.SetHeadersFromHTTP(header)
+	}
+	// 兼容性：同步到local header
 	tp.Header = make(http.Header)
-	for k, HValues := range header {
-		var newHValues []string
-		newHValues = append(newHValues, HValues...)
-		tp.Header[k] = newHValues
+	for k, values := range header {
+		tp.Header[k] = append([]string(nil), values...)
 	}
 	return tp
 }
 
-// GetHeader 获取Temporary Header
 func (tp *Temporary) GetHeader() http.Header {
+	if tp.req != nil {
+		return tp.req.GetHeader()
+	}
 	return tp.Header
 }
 
-// AddAcceptEncoding 设置Temporary Compress
 func (tp *Temporary) AddAcceptEncoding(c AcceptEncodingType) {
 	tp.acceptEncoding = append(tp.acceptEncoding, c)
 }
 
-// GetCompress 获取Temporary Compress
 func (tp *Temporary) GetAcceptEncoding() []AcceptEncodingType {
 	return tp.acceptEncoding
 }
 
-// MergeHeader 合并 Header. 并进 Temporary
 func (tp *Temporary) MergeHeader(cheader http.Header) {
+	if tp.req != nil {
+		tp.req.MergeHeader(cheader)
+	}
+	// 兼容性同步
 	for key, values := range cheader {
 		for _, v := range values {
 			tp.Header.Add(key, v)
@@ -96,554 +112,314 @@ func (tp *Temporary) MergeHeader(cheader http.Header) {
 	}
 }
 
-// DelHeader 添加头信息 Get方法从Header参数上获取
 func (tp *Temporary) DelHeader(key string) *Temporary {
-	tp.Header.Del(key)
+	if tp.req != nil {
+		tp.req.DelHeader(key)
+	}
+	tp.Header.Del(key) // 兼容性
 	return tp
 }
 
-// SetCookie 添加Cookie
-func (tp *Temporary) SetCookie(c *http.Cookie) *Temporary {
-	tp.Cookies[c.Name] = c
+func (tp *Temporary) SetCookie(cookie *http.Cookie) *Temporary {
+	if tp.req != nil {
+		tp.req.SetCookie(cookie)
+	}
+	tp.Cookies[cookie.Name] = cookie // 兼容性
 	return tp
 }
 
-// AddCookies 添加[]*http.Cookie
-func (tp *Temporary) AddCookies(cookies []*http.Cookie) *Temporary {
-	for _, c := range cookies {
-		tp.SetCookie(c)
+func (tp *Temporary) SetCookieValue(name, value string) *Temporary {
+	if tp.req != nil {
+		tp.req.SetCookieValue(name, value)
+	}
+	tp.Cookies[name] = &http.Cookie{Name: name, Value: value} // 兼容性
+	return tp
+}
+
+func (tp *Temporary) DelCookie(name interface{}) *Temporary {
+	if tp.req != nil {
+		tp.req.DelCookie(name)
+	}
+	// 兼容性处理
+	switch v := name.(type) {
+	case string:
+		delete(tp.Cookies, v)
+	case *http.Cookie:
+		delete(tp.Cookies, v.Name)
 	}
 	return tp
 }
 
-// SetCookieKV 添加 以 key value 的 Cookie
-func (tp *Temporary) SetCookieKV(name, value string) *Temporary {
-	tp.Cookies[name] = &http.Cookie{Name: name, Value: value}
+func (tp *Temporary) SetParsedURL(u *url.URL) *Temporary {
+	if tp.req != nil {
+		tp.req.SetParsedURL(u)
+	}
+	tp.ParsedURL = u // 兼容性
 	return tp
 }
 
-// DelCookie 删除Cookie
-func (tp *Temporary) DelCookie(name interface{}) *Temporary {
-	switch n := name.(type) {
-	case string:
-		if _, ok := tp.Cookies[n]; ok {
-			delete(tp.Cookies, n)
-			return tp
+func (tp *Temporary) GetParsedURL() *url.URL {
+	if tp.req != nil {
+		return tp.req.GetParsedURL()
+	}
+	return tp.ParsedURL
+}
+
+func (tp *Temporary) GetRawURL() string {
+	if tp.req != nil {
+		return tp.req.GetRawURL()
+	}
+	if tp.ParsedURL != nil {
+		return tp.ParsedURL.String()
+	}
+	return ""
+}
+
+func (tp *Temporary) SetQuery(params url.Values) *Temporary {
+	if tp.req != nil {
+		tp.req.SetQuery(params)
+	}
+	return tp
+}
+
+func (tp *Temporary) GetQuery() url.Values {
+	if tp.req != nil {
+		return tp.req.GetQuery()
+	}
+	if tp.ParsedURL != nil {
+		return tp.ParsedURL.Query()
+	}
+	return make(url.Values)
+}
+
+func (tp *Temporary) MergeQuery(query url.Values) *Temporary {
+	if tp.req != nil {
+		tp.req.MergeQuery(query)
+	}
+	return tp
+}
+
+func (tp *Temporary) GetURLRawPath() string {
+	if tp.req != nil {
+		return tp.req.GetURLRawPath()
+	}
+	if tp.ParsedURL != nil {
+		return tp.ParsedURL.Path
+	}
+	return ""
+}
+
+func (tp *Temporary) SetURLRawPath(path string) *Temporary {
+	if tp.req != nil {
+		tp.req.SetURLRawPath(path)
+	}
+	// 兼容性：同步到ParsedURL
+	if tp.ParsedURL != nil {
+		if path[0] != '/' {
+			tp.ParsedURL.Path = "/" + path
+		} else {
+			tp.ParsedURL.Path = path
 		}
-	case *http.Cookie:
-		if _, ok := tp.Cookies[n.Name]; ok {
-			delete(tp.Cookies, n.Name)
-			return tp
+	}
+	return tp
+}
+
+func (tp *Temporary) GetURLPath() []string {
+	if tp.req != nil {
+		return tp.req.GetURLPath()
+	}
+	// 兼容性实现
+	if tp.ParsedURL != nil {
+		// 这里需要实现与Request相同的逻辑
+		path := tp.ParsedURL.Path
+		// 简化实现，使用strings.Split
+		if path == "" || path == "/" {
+			return []string{}
 		}
-	default:
-		panic("name type is not support")
+		// 移除开头的/并split
+		if path[0] == '/' {
+			path = path[1:]
+		}
+		parts := make([]string, 0)
+		for _, part := range strings.Split(path, "/") {
+			if part != "" {
+				parts = append(parts, "/"+part)
+			}
+		}
+		return parts
 	}
 	return nil
 }
 
-// GetParsedURL 获取url的string形式
-func (tp *Temporary) GetParsedURL() *url.URL {
-	return tp.ParsedURL
-}
-
-// SetParsedURL 获取url的string形式
-func (tp *Temporary) SetParsedURL(u *url.URL) *Temporary {
-	tp.ParsedURL = u
-	return tp
-}
-
-// GetRawURL get url的string形式
-func (tp *Temporary) GetRawURL() string {
-	// u := strings.Split(wf.ParsedURL.String(), "?")[0] + "?" + wf.GetCombineQuery().Encode()
-	return tp.ParsedURL.String()
-}
-
-// SetRawURL set url
-func (tp *Temporary) SetRawURL(srcURL string) *Temporary {
-	if tp.err != nil {
-		return tp // Pass through the error
-	}
-
-	purl, err := url.ParseRequestURI(srcURL)
-	if err != nil {
-		tp.err = err
-		return tp
-	}
-	tp.ParsedURL = purl
-	return tp
-}
-
-// GetQuery get Query params
-func (tp *Temporary) GetQuery() url.Values {
-	return tp.ParsedURL.Query()
-}
-
-// SetQuery set Query params
-func (tp *Temporary) SetQuery(query url.Values) *Temporary {
-	if query == nil {
-		return tp
-	}
-	// query = (url.Values)(mergeMapList(wf.session.Query, query))
-	tp.ParsedURL.RawQuery = query.Encode()
-	return tp
-}
-
-// MergeQuery 设置Query参数
-func (tp *Temporary) MergeQuery(query url.Values) {
-	tpquery := tp.ParsedURL.Query()
-	for key, values := range query {
-		for _, v := range values {
-			tpquery.Add(key, v)
-		}
-	}
-	tp.ParsedURL.RawQuery = tpquery.Encode()
-}
-
-// QueryParam Get the Interface of Query Param. never return nil. 不会返回nil
-func (tp *Temporary) QueryParam(key string) IParam {
-	// 为了向后兼容，创建一个Request适配器
-	req := &Request{
-		parsedURL: tp.ParsedURL,
-	}
-	return &ParamQuery{req: req, Key: key}
-}
-
-// PathParam Path param 使用正则匹配路径参数.  group为参数 eg. /get?page=1&name=xiaoming 不包含?page=1&name=xiaoming
-func (tp *Temporary) PathParam(regexpGroup string) IParam {
-	// 为了向后兼容，创建一个Request适配器
-	req := &Request{
-		parsedURL: tp.ParsedURL,
-	}
-	return extractorParam(req, regexpGroup, tp.ParsedURL.Path)
-}
-
-// HostParam Host param 使用正则匹配Host参数. group为参数 eg.  httpbin.org
-func (tp *Temporary) HostParam(regexpGroup string) IParam {
-	// 为了向后兼容，创建一个Request适配器
-	req := &Request{
-		parsedURL: tp.ParsedURL,
-	}
-	return extractorParam(req, regexpGroup, tp.ParsedURL.Host)
-}
-
-var regexGetPath = regexp.MustCompile("/[^/]*")
-
-// GetURLPath get Path param eg: http://localhost/anything/user/pwd return [/anything /user /pwd]
-func (tp *Temporary) GetURLPath() []string {
-	return regexGetPath.FindAllString(tp.ParsedURL.Path, -1)
-}
-
-// GetURLRawPath 获取未分解Path参数
-func (tp *Temporary) GetURLRawPath() string {
-	return tp.ParsedURL.Path
-}
-
-// encodePath path格式每个item都必须以/开头
-func encodePath(path []string) string {
-	rawpath := ""
-	for _, p := range path {
-		if p[0] != '/' {
-			p = "/" + p
-		}
-		rawpath += p
-	}
-	return rawpath
-}
-
-// SetURLPath 设置Path参数 对应 GetURLPath
 func (tp *Temporary) SetURLPath(path []string) *Temporary {
-	if path == nil {
-		return tp
+	if tp.req != nil {
+		tp.req.SetURLPath(path)
 	}
-	tp.ParsedURL.Path = encodePath(path)
-	return tp
-}
-
-// SetURLRawPath 设置 参数 eg. /get = http:// hostname + /get
-func (tp *Temporary) SetURLRawPath(path string) *Temporary {
-	if path[0] != '/' {
-		tp.ParsedURL.Path = "/" + path
-	} else {
-		tp.ParsedURL.Path = path
-	}
-	return tp
-}
-
-// SetBody url body 参数设置
-func (tp *Temporary) SetBody(body io.Reader) *Temporary {
-	if tp.err != nil {
-		return tp // Pass through the error
-	}
-
-	var buf = bytes.NewBuffer(nil)
-	_, err := io.Copy(buf, body)
-	if err != nil {
-		tp.err = err
-		return tp
-	}
-	tp.Body = buf
-
-	if tp.Header.Get("Content-Type") == "" {
-		tp.Header.Set("Content-Type", TypeStream)
-	}
-
-	return tp
-}
-
-type MultipartFormData struct {
-	data   bytes.Buffer
-	writer *multipart.Writer
-}
-
-func (mpfd *MultipartFormData) AddFieldFile(fieldname string, filename string, file io.Reader) error {
-	w, err := mpfd.writer.CreateFormFile(fieldname, filename)
-	if err != nil {
-		return err
-	}
-	_, err = io.Copy(w, file)
-	return err
-}
-
-func (mpfd *MultipartFormData) AddField(fieldname string, value string) error {
-	return mpfd.writer.WriteField(fieldname, value)
-}
-
-func (mpfd *MultipartFormData) AddFieldBytes(fieldname string, buf []byte) error {
-	w, err := mpfd.writer.CreateFormField(fieldname)
-	if err != nil {
-		return err
-	}
-	_, err = w.Write(buf)
-	return err
-}
-
-func (mpfd *MultipartFormData) SetBoundary(boundary string) error {
-	return mpfd.writer.SetBoundary(boundary)
-}
-
-func (mpfd *MultipartFormData) Boundary() string {
-	return mpfd.writer.Boundary()
-}
-
-func (mpfd *MultipartFormData) Close() error {
-	return mpfd.writer.Close()
-}
-
-func (mpfd *MultipartFormData) Data() *bytes.Buffer {
-	return &mpfd.data
-}
-
-// GetBodyMultipart if get multipart, body = NewBody.  使用multipart/form-data. 传递keyvalue. 传递file.
-// 每次都需要重置
-func (tp *Temporary) CreateBodyMultipart() *MultipartFormData {
-
-	mpfd := &MultipartFormData{}
-	mpfd.writer = multipart.NewWriter(&mpfd.data)
-
-	return mpfd
-}
-
-// SetBodyUrlencoded Body FormData传参数. 推荐url.Values结构
-func (tp *Temporary) SetBodyUrlencoded(params interface{}) *Temporary {
-	if tp.err != nil {
-		return tp // Pass through the error
-	}
-
-	tp.Header.Set(HeaderKeyContentType, TypeURLENCODED)
-	if params == nil {
-		tp.Body = nil
-		return tp
-	}
-
-	switch param := params.(type) {
-	case url.Values:
-		tp.Body = bytes.NewBufferString(param.Encode())
-	case map[string][]string:
-		var values url.Values = param
-		tp.Body = bytes.NewBufferString(values.Encode())
-	case map[string]string:
-		var values url.Values = make(url.Values)
-		for k, v := range param {
-			values.Add(k, v)
-		}
-		tp.Body = bytes.NewBufferString(values.Encode())
-	case map[string]int:
-		var values url.Values = make(url.Values)
-		for k, v := range param {
-			values.Add(k, strconv.Itoa(v))
-		}
-		tp.Body = bytes.NewBufferString(values.Encode())
-	case map[string]uint:
-		var values url.Values = make(url.Values)
-		for k, v := range param {
-			values.Add(k, strconv.FormatUint(uint64(v), 10))
-		}
-		tp.Body = bytes.NewBufferString(values.Encode())
-	case map[string]int64:
-		var values url.Values = make(url.Values)
-		for k, v := range param {
-			values.Add(k, strconv.FormatInt(v, 10))
-		}
-		tp.Body = bytes.NewBufferString(values.Encode())
-	case map[string]uint64:
-		var values url.Values = make(url.Values)
-		for k, v := range param {
-			values.Add(k, strconv.FormatUint(v, 10))
-		}
-		tp.Body = bytes.NewBufferString(values.Encode())
-	case map[string]float64:
-		var values url.Values = make(url.Values)
-		for k, v := range param {
-			values.Add(k, strconv.FormatFloat(v, 'f', tp.FloatPrec, 64))
-		}
-		tp.Body = bytes.NewBufferString(values.Encode())
-	case string:
-		tp.Body = bytes.NewBufferString(param)
-	case []byte:
-		tp.Body = bytes.NewBuffer(param)
-	case []rune: // 风险
-		tp.Body = bytes.NewBuffer([]byte(string(param)))
-	default:
-		tp.err = errors.New("only support [url.Values,map[string][]string,map[string]string,string,[]byte,[]rune]")
-		return tp
-	}
-	return tp
-}
-
-// SetBodyFormData Body FormData传参数
-func (tp *Temporary) SetBodyFormData(params ...interface{}) *Temporary {
-	if tp.err != nil {
-		return tp // Pass through the error
-	}
-
-	defaultContentType := TypeFormData
-	var mwriter *multipart.Writer
-	if len(params) == 1 {
-		if w, ok := params[0].(*MultipartFormData); ok {
-			tp.Body = w.Data()
-			err := w.writer.Close()
-			if err != nil {
-				tp.err = err
-				return tp
+	// 兼容性实现
+	if tp.ParsedURL != nil && path != nil {
+		rawpath := ""
+		for _, p := range path {
+			if p[0] != '/' {
+				p = "/" + p
 			}
-			mwriter = w.writer
+			rawpath += p
 		}
-	}
-
-	if mwriter == nil {
-		body, writer, err := createMultipartExSafe(params...)
-		if err != nil {
-			tp.err = err
-			return tp
-		}
-		tp.Body = body
-		mwriter = writer
-	}
-
-	if mwriter != nil {
-		defaultContentType += ";boundary=" + mwriter.Boundary()
-	}
-	tp.Header.Set(HeaderKeyContentType, defaultContentType)
-	return tp
-}
-
-// SetBody Body with type T为类型
-func (tp *Temporary) SetBodyWithType(T string, params interface{}) *Temporary {
-	tp.Header.Set(HeaderKeyContentType, T)
-	if params == nil {
-		tp.Body = nil
-		return tp
-	}
-	switch param := params.(type) {
-	case string:
-		tp.Body = bytes.NewBufferString(param)
-	case []byte:
-		tp.Body = bytes.NewBuffer(param)
-	case []rune: // 风险
-		tp.Body = bytes.NewBuffer([]byte(string(param)))
-	default:
-		log.Panic(errors.New("only support [string(a=x&b=c),[]byte,[]rune"))
+		tp.ParsedURL.Path = rawpath
 	}
 	return tp
 }
 
-// SetBodyJson Body Json传参数. 支持string,[]byte,[]rune,map[string]interface{}, []string, []interface{}, map[string]string,结构体等
-func (tp *Temporary) SetBodyJson(params interface{}) *Temporary {
-	if tp.err != nil {
-		return tp // Pass through the error
+func (tp *Temporary) QueryParam(key string) IParam {
+	if tp.req != nil {
+		return tp.req.QueryParam(key)
 	}
+	// 兼容性：创建一个简单的参数处理器
+	return &ParamQuery{req: tp.req, Key: key}
+}
 
-	tp.Header.Set(HeaderKeyContentType, TypeJSON)
-	if params == nil {
-		tp.Body = nil
-		return tp
+func (tp *Temporary) PathParam(regexpGroup string) IParam {
+	if tp.req != nil {
+		return tp.req.PathParam(regexpGroup)
 	}
-	switch v := params.(type) {
-	case string:
-		tp.Body = bytes.NewBufferString(v)
-	case []byte:
-		tp.Body = bytes.NewBuffer(v)
-	case []rune: // 可能有风险
-		tp.Body = bytes.NewBuffer([]byte(string(v)))
-	default: // map[string]interface{}, []string, []interface{}, map[string]string:
-		data, err := json.Marshal(v)
-		if err != nil {
-			tp.err = err
-			return tp
-		}
-		tp.Body = bytes.NewBuffer(data)
-	}
+	// 兼容性实现
+	return extractorParam(tp.req, regexpGroup, tp.GetURLRawPath())
+}
 
+func (tp *Temporary) HostParam(regexpGroup string) IParam {
+	if tp.req != nil {
+		return tp.req.HostParam(regexpGroup)
+	}
+	// 兼容性实现
+	host := ""
+	if tp.ParsedURL != nil {
+		host = tp.ParsedURL.Host
+	}
+	return extractorParam(tp.req, regexpGroup, host)
+}
+
+func (tp *Temporary) SetBody(body io.Reader) *Temporary {
+	if tp.req != nil {
+		tp.req.SetBodyReader(body)
+	}
+	// 兼容性：尝试读取到bytes.Buffer中
+	if buf, ok := body.(*bytes.Buffer); ok {
+		tp.Body = buf
+	} else {
+		// 创建新的buffer并复制数据
+		tp.Body = &bytes.Buffer{}
+		io.Copy(tp.Body, body)
+	}
 	return tp
 }
 
-// SetBodyPlain Body Plain传参数
+func (tp *Temporary) SetBodyJson(v interface{}) *Temporary {
+	if tp.req != nil {
+		tp.req.SetBodyJSON(v)
+	}
+	return tp
+}
+
+func (tp *Temporary) SetBodyWithType(contentType string, params interface{}) *Temporary {
+	if tp.req != nil {
+		tp.req.SetBodyWithType(contentType, params)
+	}
+	return tp
+}
+
+func (tp *Temporary) SetBodyFormData(params ...interface{}) *Temporary {
+	if tp.req != nil {
+		tp.req.SetBodyFormData(params...)
+	}
+	return tp
+}
+
+func (tp *Temporary) SetBodyUrlencoded(data interface{}) *Temporary {
+	if tp.req != nil {
+		tp.req.SetBodyUrlencoded(data)
+	}
+	return tp
+}
+
 func (tp *Temporary) SetBodyPlain(params interface{}) *Temporary {
-	if tp.err != nil {
-		return tp // Pass through the error
-	}
-
-	tp.Header.Set(HeaderKeyContentType, TypePlain)
-	if params == nil {
-		tp.Body = nil
-		return tp
-	}
-	switch param := params.(type) {
-	case string:
-		tp.Body = bytes.NewBufferString(param)
-	case []byte:
-		tp.Body = bytes.NewBuffer(param)
-	case []rune: // 风险
-		tp.Body = bytes.NewBuffer([]byte(string(param)))
-	default:
-		tp.err = errors.New("only support [string,[]byte,[]rune]")
-		return tp
+	if tp.req != nil {
+		tp.req.SetBodyPlain(params)
 	}
 	return tp
 }
 
-// SetBodyStream Body Stream传参数
 func (tp *Temporary) SetBodyStream(params interface{}) *Temporary {
-	if tp.err != nil {
-		return tp // Pass through the error
-	}
-
-	tp.Header.Set(HeaderKeyContentType, TypeStream)
-	if params == nil {
-		tp.Body = nil
-		return tp
-	}
-	switch param := params.(type) {
-	case string:
-		tp.Body = bytes.NewBufferString(param)
-	case []byte:
-		tp.Body = bytes.NewBuffer(param)
-	case []rune: // 风险
-		tp.Body = bytes.NewBuffer([]byte(string(param)))
-	default:
-		tp.err = errors.New("only support [string,[]byte,[]rune]")
-		return tp
+	if tp.req != nil {
+		tp.req.SetBodyStream(params)
 	}
 	return tp
 }
 
-// setHeaderRequest 设置request的头
-func setHeaderRequest(req *http.Request, wf *Temporary) {
-	for key, values := range wf.session.Header {
-		req.Header[key] = values
+// CreateBodyMultipart 返回一个兼容性的multipart构建器
+func (tp *Temporary) CreateBodyMultipart() *MultipartFormData {
+	if tp.req != nil {
+		return tp.req.CreateBodyMultipart()
 	}
-
-	for key, values := range wf.Header {
-		req.Header[key] = values
-	}
-
+	// 兼容性实现
+	return &MultipartFormData{}
 }
 
-// setHeaderRequest 设置request的临时Cookie, 永久需要在session上设置cookie
-func setTempCookieRequest(req *http.Request, wf *Temporary) {
-	if wf.Cookies != nil {
-		for _, c := range wf.Cookies {
-			req.AddCookie(c)
-		}
+func (tp *Temporary) Error() error {
+	if tp.err != nil {
+		return tp.err
 	}
+	if tp.req != nil {
+		return tp.req.Error()
+	}
+	return nil
 }
 
-// Execute 执行. 请求后会清楚Body的内容. 需要重新
 func (tp *Temporary) Execute() (*Response, error) {
 	if tp.err != nil {
-		return nil, tp.err // Return the stored error
+		return nil, tp.err
 	}
 
-	req, err := tp.BuildRequest()
-	if err != nil {
-		return nil, err
+	if tp.req == nil {
+		return nil, errors.New("internal Request is nil")
 	}
 
-	resp, err := tp.session.client.Do(req)
-	if err != nil {
-		return nil, err
+	// 确保method被正确设置
+	if tp.Method != "" && tp.Method != tp.req.method {
+		tp.req.method = tp.Method
 	}
 
-	myResponse, err := FromHTTPResponse(resp, tp.session.Is.isDecompressNoAccept)
-	if err != nil {
-		return nil, err
-	}
-	myResponse.readResponse = resp
-	return myResponse, nil
+	return tp.req.Execute()
 }
 
-// BuildRequest 根据Session Temporary 的条件创建 http.request
 func (tp *Temporary) BuildRequest() (*http.Request, error) {
-	if tp.mwriter != nil {
-		tp.mwriter.Close()
-		tp.mwriter = nil
-	}
-	req, err := buildBodyRequest(tp)
-	if err != nil {
-		return req, err
-	}
-	setHeaderRequest(req, tp)
-	setTempCookieRequest(req, tp)
-
-	if tp.session.auth != nil {
-		req.SetBasicAuth(tp.session.auth.User, tp.session.auth.Password)
+	if tp.err != nil {
+		return nil, tp.err
 	}
 
-	return req, nil
+	if tp.req == nil {
+		return nil, errors.New("internal Request is nil")
+	}
+
+	// 使用Request的buildHTTPRequest方法
+	return tp.req.buildHTTPRequest()
 }
 
-// TestExecute 根据Session Temporary 的条件创建 http.request. 使用ITestServer 进行测试. 默认无解压
 func (tp *Temporary) TestExecute(server ITestServer) (*Response, error) {
-
-	req, err := tp.BuildRequest()
-	if err != nil {
-		return nil, err
+	if tp.err != nil {
+		return nil, tp.err
 	}
 
-	w := httptest.NewRecorder()
-	server.ServeHTTP(w, req)
-	resp, err := FromHTTPResponse(w.Result(), false)
-	if err != nil {
-		return nil, err
+	if tp.req == nil {
+		return nil, errors.New("internal Request is nil")
 	}
 
-	return resp, nil
+	return tp.req.TestExecute(server)
 }
 
-// TestExecuteWithDecompress 根据Session Temporary 的条件创建 http.request. 使用ITestServer 进行测试. 如果body需要解压, 自动解压
-func (tp *Temporary) TestExecuteWithDecompress(server ITestServer) (*Response, error) {
-
-	req, err := tp.BuildRequest()
-	if err != nil {
-		return nil, err
+// 辅助方法用于设置Method（兼容性需要）
+func (tp *Temporary) SetMethod(method string) *Temporary {
+	tp.Method = method
+	if tp.req != nil {
+		tp.req.method = method
 	}
-
-	w := httptest.NewRecorder()
-	server.ServeHTTP(w, req)
-	resp, err := FromHTTPResponse(w.Result(), true)
-	if err != nil {
-		return nil, err
-	}
-
-	return resp, nil
+	return tp
 }

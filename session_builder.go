@@ -3,6 +3,7 @@ package requests
 import (
 	"context"
 	"crypto/tls"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -10,6 +11,12 @@ import (
 
 	"golang.org/x/net/publicsuffix"
 )
+
+// RetryConfig 重试配置
+type RetryConfig struct {
+	MaxRetries int
+	Backoff    time.Duration
+}
 
 // SessionOption 定义Session配置选项
 type SessionOption func(*Session) error
@@ -157,8 +164,111 @@ func WithMaxIdleConnsPerHost(maxConns int) SessionOption {
 // WithContext 设置默认上下文
 func WithContext(ctx context.Context) SessionOption {
 	return func(s *Session) error {
-		// 这里可以存储默认上下文，在Request中使用
-		// 暂时不实现，因为需要修改Request结构
+		// 存储默认上下文，在创建Request时使用
+		s.defaultContext = ctx
+		return nil
+	}
+}
+
+// WithRetry 设置重试配置
+func WithRetry(maxRetries int, backoff time.Duration) SessionOption {
+	return func(s *Session) error {
+		s.retryConfig = &RetryConfig{
+			MaxRetries: maxRetries,
+			Backoff:    backoff,
+		}
+		return nil
+	}
+}
+
+// WithRedirectPolicy 设置重定向策略
+func WithRedirectPolicy(policy func(req *http.Request, via []*http.Request) error) SessionOption {
+	return func(s *Session) error {
+		if s.client == nil {
+			s.client = &http.Client{}
+		}
+		s.client.CheckRedirect = policy
+		return nil
+	}
+}
+
+// WithDisableRedirects 禁用自动重定向
+func WithDisableRedirects() SessionOption {
+	return func(s *Session) error {
+		if s.client == nil {
+			s.client = &http.Client{}
+		}
+		s.client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		}
+		return nil
+	}
+}
+
+// WithMiddleware 添加中间件
+func WithMiddleware(middleware ...Middleware) SessionOption {
+	return func(s *Session) error {
+		s.middlewares = append(s.middlewares, middleware...)
+		return nil
+	}
+}
+
+// WithInsecureSkipVerify 跳过TLS证书验证
+func WithInsecureSkipVerify() SessionOption {
+	return func(s *Session) error {
+		if s.transport == nil {
+			s.transport = &http.Transport{}
+		}
+		if s.transport.TLSClientConfig == nil {
+			s.transport.TLSClientConfig = &tls.Config{}
+		}
+		s.transport.TLSClientConfig.InsecureSkipVerify = true
+		return nil
+	}
+}
+
+// WithDialTimeout 设置连接超时
+func WithDialTimeout(timeout time.Duration) SessionOption {
+	return func(s *Session) error {
+		if s.transport == nil {
+			s.transport = &http.Transport{}
+		}
+		s.transport.DialContext = (&net.Dialer{
+			Timeout: timeout,
+		}).DialContext
+		return nil
+	}
+}
+
+// WithMaxConnsPerHost 设置每个主机的最大连接数
+func WithMaxConnsPerHost(maxConns int) SessionOption {
+	return func(s *Session) error {
+		if s.transport == nil {
+			s.transport = &http.Transport{}
+		}
+		s.transport.MaxConnsPerHost = maxConns
+		return nil
+	}
+}
+
+// WithReadBufferSize 设置读缓冲区大小
+func WithReadBufferSize(size int) SessionOption {
+	return func(s *Session) error {
+		if s.transport == nil {
+			s.transport = &http.Transport{}
+		}
+		s.transport.ReadBufferSize = size
+		return nil
+	}
+}
+
+// WithWriteBufferSize 设置写缓冲区大小
+func WithWriteBufferSize(size int) SessionOption {
+	return func(s *Session) error {
+		if s.transport == nil {
+			s.transport = &http.Transport{}
+		}
+		s.transport.WriteBufferSize = size
 		return nil
 	}
 }
@@ -241,5 +351,78 @@ func NewSessionForScraping() (*Session, error) {
 		WithKeepAlives(true),
 		WithCompression(true),
 		WithMaxIdleConnsPerHost(5),
+	)
+}
+
+// NewSessionForTesting 创建适合测试的Session
+func NewSessionForTesting() (*Session, error) {
+	return NewSessionWithOptions(
+		WithTimeout(5*time.Second),
+		WithUserAgent("Go-Requests-Test/1.0"),
+		WithDisableCookies(),
+		WithDisableRedirects(),
+	)
+}
+
+// NewSessionWithDefaults 使用推荐的默认配置创建Session
+func NewSessionWithDefaults() (*Session, error) {
+	return NewSessionWithOptions(
+		WithTimeout(30*time.Second),
+		WithUserAgent("Go-Requests/2.0"),
+		WithKeepAlives(true),
+		WithCompression(true),
+		WithMaxIdleConnsPerHost(10),
+		WithMaxConnsPerHost(50),
+		WithDialTimeout(10*time.Second),
+	)
+}
+
+// NewSessionWithRetry 创建带重试功能的Session
+func NewSessionWithRetry(maxRetries int, backoff time.Duration) (*Session, error) {
+	return NewSessionWithOptions(
+		WithTimeout(30*time.Second),
+		WithUserAgent("Go-Requests-Retry/1.0"),
+		WithKeepAlives(true),
+		WithCompression(true),
+		WithRetry(maxRetries, backoff),
+	)
+}
+
+// NewSessionWithProxy 创建带代理的Session
+func NewSessionWithProxy(proxyURL string) (*Session, error) {
+	return NewSessionWithOptions(
+		WithTimeout(30*time.Second),
+		WithUserAgent("Go-Requests-Proxy/1.0"),
+		WithProxy(proxyURL),
+		WithKeepAlives(true),
+		WithCompression(true),
+	)
+}
+
+// NewSecureSession 创建安全增强的Session（适用于敏感数据传输）
+func NewSecureSession() (*Session, error) {
+	return NewSessionWithOptions(
+		WithTimeout(30*time.Second),
+		WithUserAgent("Go-Requests-Secure/1.0"),
+		WithKeepAlives(false), // 不保持连接以提高安全性
+		WithCompression(true),
+		WithDisableCookies(), // 不使用Cookies
+		// 注意：默认不跳过TLS验证以保证安全
+	)
+}
+
+// NewHighPerformanceSession 创建高性能Session
+func NewHighPerformanceSession() (*Session, error) {
+	return NewSessionWithOptions(
+		WithTimeout(60*time.Second),
+		WithUserAgent("Go-Requests-Performance/1.0"),
+		WithKeepAlives(true),
+		WithCompression(true),
+		WithMaxIdleConns(100),
+		WithMaxIdleConnsPerHost(20),
+		WithMaxConnsPerHost(100),
+		WithDialTimeout(5*time.Second),
+		WithReadBufferSize(64*1024),  // 64KB
+		WithWriteBufferSize(64*1024), // 64KB
 	)
 }
