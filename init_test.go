@@ -139,5 +139,112 @@ func init() {
 
 	})
 
+	// 添加 /anything 端点来模拟 httpbin.org/anything
+	TestServer.HandleFunc("/anything", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		// 读取请求体
+		var bodyData interface{}
+		var bodyString string
+		if r.Body != nil {
+			bodyBytes, err := io.ReadAll(r.Body)
+			if err == nil && len(bodyBytes) > 0 {
+				bodyString = string(bodyBytes)
+				// 尝试解析JSON
+				var jsonData interface{}
+				if json.Unmarshal(bodyBytes, &jsonData) == nil {
+					bodyData = jsonData
+				}
+			}
+		}
+
+		// 获取查询参数
+		args := make(map[string]interface{})
+		for key, values := range r.URL.Query() {
+			if len(values) == 1 {
+				args[key] = values[0]
+			} else {
+				args[key] = values
+			}
+		}
+
+		// 获取表单数据
+		form := make(map[string]interface{})
+		if r.Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
+			r.ParseForm()
+			for key, values := range r.PostForm {
+				if len(values) == 1 {
+					form[key] = values[0]
+				} else {
+					form[key] = values
+				}
+			}
+		}
+
+		// 获取请求头
+		headers := make(map[string]string)
+		for key, values := range r.Header {
+			headers[key] = strings.Join(values, ", ")
+		}
+
+		// 构建响应
+		response := map[string]interface{}{
+			"args":    args,
+			"data":    bodyString,
+			"files":   map[string]interface{}{},
+			"form":    form,
+			"headers": headers,
+			"json":    bodyData,
+			"method":  r.Method,
+			"origin":  "127.0.0.1", // 本地测试
+			"url":     "http://localhost" + r.RequestURI,
+		}
+
+		responseBytes, err := json.Marshal(response)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		w.Write(responseBytes)
+	})
+
+	// 添加 /get 端点来模拟 httpbin.org/get
+	TestServer.HandleFunc("/get", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		// 获取查询参数
+		args := make(map[string]interface{})
+		for key, values := range r.URL.Query() {
+			if len(values) == 1 {
+				args[key] = values[0]
+			} else {
+				args[key] = values
+			}
+		}
+
+		// 获取请求头
+		headers := make(map[string]string)
+		for key, values := range r.Header {
+			headers[key] = strings.Join(values, ", ")
+		}
+
+		// 构建响应
+		response := map[string]interface{}{
+			"args":    args,
+			"headers": headers,
+			"origin":  "127.0.0.1",
+			"url":     "http://localhost" + r.RequestURI,
+		}
+
+		responseBytes, err := json.Marshal(response)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		w.Write(responseBytes)
+	})
+
 	time.Sleep(time.Millisecond * 500)
 }

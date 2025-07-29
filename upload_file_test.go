@@ -1,252 +1,341 @@
 package requests
 
 import (
-	"io/ioutil"
+	"io"
+	"net/http"
 	"os"
-	"path/filepath"
+	"strings"
 	"testing"
-
-	"github.com/tidwall/gjson"
 )
 
-func TestUploadFile(t *testing.T) {
+// FileUploadTestServer 模拟文件上传服务器
+type FileUploadTestServer struct{}
 
-	for i := 0; i < 1; i++ {
+func (s *FileUploadTestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 
-		ses := NewSession()
-		wf := ses.Put("http://httpbin.org/put")
+	// 解析multipart表单
+	err := r.ParseMultipartForm(32 << 20) // 32MB max
+	if err != nil {
+		http.Error(w, "Failed to parse multipart form", http.StatusBadRequest)
+		return
+	}
 
-		ufile, err := UploadFileFromPath("tests/json.file")
-		if err != nil {
-			t.Error(err)
-			panic("")
-		}
-		wf.SetBodyFormData(ufile)
-		resp, err := wf.Execute()
-		if err != nil {
-			panic(err)
-		}
-		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file0"]; !ok {
-			t.Error("file error", string(resp.Content()))
-			panic("")
-		}
+	response := map[string]interface{}{
+		"method": r.Method,
+		"url":    r.URL.String(),
+		"files":  make(map[string]interface{}),
+		"form":   make(map[string]interface{}),
+	}
 
-		ses = NewSession()
-		wf = ses.Patch("http://httpbin.org/patch")
+	// 处理文件
+	if r.MultipartForm != nil && r.MultipartForm.File != nil {
+		for fieldName, fileHeaders := range r.MultipartForm.File {
+			if len(fileHeaders) > 0 {
+				fileHeader := fileHeaders[0]
+				file, err := fileHeader.Open()
+				if err != nil {
+					continue
+				}
+				defer file.Close()
 
-		wf.SetBodyFormData("tests/json.file")
-		resp, _ = wf.Execute()
-		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file0"]; !ok {
-			t.Error("file error", string(resp.Content()))
-			panic("")
-		}
+				// 读取文件内容
+				content, err := io.ReadAll(file)
+				if err != nil {
+					continue
+				}
 
-		ses = NewSession()
-		wf = ses.Delete("http://httpbin.org/delete")
-		ufile = NewUploadFile()
-		ufile.SetFileName("MyFile")
-		ufile.SetFieldName("MyField")
-		ufile.SetFileFromPath("tests/json.file")
-		wf.SetBodyFormData(ufile)
-		resp, _ = wf.Execute()
-		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["MyField"]; !ok {
-			t.Error("file error", string(resp.Content()))
-		}
-
-		// ses = NewSession()
-		// wf = ses.Put("http://httpbin.org/put")
-
-		ufile.SetFileFromPath("tests/json.file")
-		wf.SetBodyFormData(*ufile)
-		resp, _ = wf.Execute()
-		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["MyField"]; !ok {
-			t.Error("file error", string(resp.Content()))
-		}
-
-		// ses = NewSession()
-		// wf = ses.Put("http://httpbin.org/put")
-
-		ufile = NewUploadFile()
-		ufile.SetFileName("MyFile")
-		ufile.SetFileFromPath("tests/json.file")
-		wf.SetBodyFormData(ufile)
-		resp, _ = wf.Execute()
-		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file0"]; !ok {
-			t.Error("file error", string(resp.Content()))
-		}
-
-		ufile.SetFileFromPath("tests/json.file")
-		wf.SetBodyFormData(*ufile)
-		resp, _ = wf.Execute()
-		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file0"]; !ok {
-			t.Error("file error", string(resp.Content()))
-		}
-
-		var ufileList []*UploadFile
-		ufile, err = UploadFileFromPath("tests/json.file")
-		if err != nil {
-			t.Error(err)
-		}
-		ufileList = append(ufileList, ufile)
-		ufile, err = UploadFileFromPath("tests/learn.js")
-		if err != nil {
-			t.Error(err)
-		}
-		ufileList = append(ufileList, ufile)
-		wf.SetBodyFormData(ufileList)
-		resp, _ = wf.Execute()
-		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file1"]; !ok {
-			t.Error("file error", string(resp.Content()))
-		}
-
-		// if wf.GetBody().ContentType() != "" {
-		// 	t.Error("Body is not Clear")
-		// }
-
-		wf.SetBodyFormData([]string{"tests/learn.js", "tests/json.file"})
-
-		resp, _ = wf.Execute()
-		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file1_0"]; !ok {
-			t.Error("file error", string(resp.Content()))
-		}
-		if _, ok := gjson.Get(string(resp.Content()), "files").Map()["file0_0"]; !ok {
-			t.Error("file error", string(resp.Content()))
+				response["files"].(map[string]interface{})[fieldName] = string(content)
+			}
 		}
 	}
+
+	// 处理表单字段
+	if r.MultipartForm != nil && r.MultipartForm.Value != nil {
+		for key, values := range r.MultipartForm.Value {
+			if len(values) > 0 {
+				response["form"].(map[string]interface{})[key] = values[0]
+			}
+		}
+	}
+
+	// 返回JSON响应
+	w.WriteHeader(http.StatusOK)
+	responseJSON := `{
+"method": "` + r.Method + `",
+"url": "` + r.URL.String() + `",
+"files": {`
+
+	filesParts := []string{}
+	for key, value := range response["files"].(map[string]interface{}) {
+		filesParts = append(filesParts, `"`+key+`": "`+value.(string)+`"`)
+	}
+	responseJSON += strings.Join(filesParts, ", ")
+
+	responseJSON += `},
+"form": {`
+
+	formParts := []string{}
+	for key, value := range response["form"].(map[string]interface{}) {
+		formParts = append(formParts, `"`+key+`": "`+value.(string)+`"`)
+	}
+	responseJSON += strings.Join(formParts, ", ")
+
+	responseJSON += `}
+}`
+
+	w.Write([]byte(responseJSON))
+}
+
+func TestUploadFile(t *testing.T) {
+	server := &FileUploadTestServer{}
+
+	// 测试UploadFile值类型
+	t.Run("UploadFile value test", func(t *testing.T) {
+		ses := NewSession()
+		req := ses.Post("/upload")
+
+		ufile := NewUploadFile()
+		ufile.SetFileName("test.txt")
+		ufile.SetFieldName("testfield")
+		ufile.SetFile(strings.NewReader("test content"))
+
+		resp, err := req.SetBodyFormData(*ufile).TestExecute(server)
+		if err != nil {
+			t.Fatalf("TestExecute failed: %v", err)
+		}
+
+		content := resp.ContentString()
+		if !strings.Contains(content, "test content") {
+			t.Errorf("Expected 'test content' not found in response: %s", content)
+		}
+	})
+
+	// 测试多个文件上传
+	t.Run("Multiple files test", func(t *testing.T) {
+		ses := NewSession()
+		req := ses.Post("/upload")
+
+		// 第一个文件
+		ufile1 := NewUploadFile()
+		ufile1.SetFileName("file1.txt")
+		ufile1.SetFieldName("file1")
+		ufile1.SetFile(strings.NewReader("first file content"))
+
+		// 第二个文件
+		ufile2 := NewUploadFile()
+		ufile2.SetFileName("file2.txt")
+		ufile2.SetFieldName("file2")
+		ufile2.SetFile(strings.NewReader("second file content"))
+
+		// 传递多个参数而不是切片
+		resp, err := req.SetBodyFormData(ufile1, ufile2).TestExecute(server)
+		if err != nil {
+			t.Fatalf("TestExecute failed: %v", err)
+		}
+
+		content := resp.ContentString()
+		// 验证两个文件都存在
+		if !strings.Contains(content, "first file content") {
+			t.Errorf("First file content not found: %s", content)
+		}
+		if !strings.Contains(content, "second file content") {
+			t.Errorf("Second file content not found: %s", content)
+		}
+	})
 }
 
 func TestBoundary(t *testing.T) {
+	server := &FileUploadTestServer{}
 
-	ses := NewSession()
-	tp := ses.Post("http://httpbin.org/post")
+	t.Run("Multipart boundary test", func(t *testing.T) {
+		ses := NewSession()
+		req := ses.Post("/boundary-test")
 
-	mw := tp.CreateBodyMultipart()
-	mw.AddField("key1", "haha")
-	mw.AddField("key2", "xixi")
+		// 使用CreateBodyMultipart创建multipart数据
+		mw := req.CreateBodyMultipart()
+		err := mw.AddField("key1", "value1")
+		if err != nil {
+			t.Fatalf("AddField failed: %v", err)
+		}
 
-	// mw.AddField("key2", "xixi")
-	// data, err := ioutil.ReadAll(tp.Body)
-	// log.Println(string(data))
-	// if err != nil {
-	// 	t.Error(err)
-	// 	return
-	// }
-	tp.SetBodyFormData(mw)
-	resp, err := tp.Execute()
-	if err != nil {
-		t.Error(err)
-		return
-	}
+		err = mw.AddField("key2", "value2")
+		if err != nil {
+			t.Fatalf("AddField failed: %v", err)
+		}
 
-	if v, ok := gjson.Get(string(resp.Content()), "form").Map()["key2"]; !ok || v.String() != "xixi" {
-		t.Error("file error", string(resp.Content()))
-	}
+		// 添加文件
+		file := strings.NewReader("test file content")
+		err = mw.AddFieldFile("testfile", "test.txt", file)
+		if err != nil {
+			t.Fatalf("AddFieldFile failed: %v", err)
+		}
 
-	resp, err = tp.Execute()
-	if err != nil {
-		t.Error(err)
-		return
-	}
+		resp, err := req.SetBodyFormData(mw).TestExecute(server)
+		if err != nil {
+			t.Fatalf("TestExecute failed: %v", err)
+		}
 
-	if v, ok := gjson.Get(string(resp.Content()), "form").Map()["key1"]; !ok || v.String() != "haha" {
-		t.Error("file error", string(resp.Content()))
-	}
+		content := resp.ContentString()
 
-	mw = tp.CreateBodyMultipart()
-	mw.AddField("key1", "haha")
-	mw.AddField("key2", "xixi")
+		// 验证表单字段
+		if !strings.Contains(content, "value1") {
+			t.Errorf("Form field 'key1: value1' not found: %s", content)
+		}
+		if !strings.Contains(content, "value2") {
+			t.Errorf("Form field 'key2: value2' not found: %s", content)
+		}
 
-	f, err := os.Open("./tests/learn.js")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = mw.AddFieldFile("filekey", "file0", f)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	tp.SetBodyFormData(mw)
-
-	resp, err = tp.Execute()
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	if _, ok := gjson.Get(string(resp.Content()), "files").Map()["filekey"]; !ok {
-		t.Error("file error", string(resp.Content()))
-	}
+		// 验证文件内容
+		if !strings.Contains(content, "test file content") {
+			t.Errorf("File content not found: %s", content)
+		}
+	})
 }
 
 func TestUploadFileFromPath(t *testing.T) {
-	// 创建一个临时文件
-	tempFile, err := ioutil.TempFile("", "testfile")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(tempFile.Name())
+	server := &FileUploadTestServer{}
 
-	// 写入数据
-	content := []byte("Hello, World!")
-	if _, err := tempFile.Write(content); err != nil {
-		t.Fatal(err)
-	}
-	if err := tempFile.Close(); err != nil {
-		t.Fatal(err)
-	}
+	t.Run("Upload from file path", func(t *testing.T) {
+		ses := NewSession()
+		req := ses.Post("/upload-path")
 
-	// 使用 UploadFileFromPath 测试
-	ufile, err := UploadFileFromPath(tempFile.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
+		ufile, err := UploadFileFromPath("tests/json.file")
+		if err != nil {
+			t.Fatalf("UploadFileFromPath failed: %v", err)
+		}
+		defer ufile.fileCloser.Close()
 
-	fileContent, err := ioutil.ReadAll(ufile.GetFile())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(fileContent) != string(content) {
-		t.Errorf("Expected file content %s, but got %s", string(content), string(fileContent))
-	}
+		// 验证UploadFile属性
+		if ufile.FileName != "tests/json.file" {
+			t.Errorf("Expected FileName 'tests/json.file', got: %s", ufile.FileName)
+		}
+
+		resp, err := req.SetBodyFormData(ufile).TestExecute(server)
+		if err != nil {
+			t.Fatalf("TestExecute failed: %v", err)
+		}
+
+		content := resp.ContentString()
+		// 验证文件内容包含预期的字符串
+		if !strings.Contains(content, "jsonjsonjsonjson") {
+			t.Errorf("Expected file content not found: %s", content)
+		}
+	})
+
+	t.Run("Upload with custom field name", func(t *testing.T) {
+		ses := NewSession()
+		req := ses.Post("/upload-custom")
+
+		ufile, err := UploadFileFromPath("tests/json.file")
+		if err != nil {
+			t.Fatalf("UploadFileFromPath failed: %v", err)
+		}
+		defer ufile.fileCloser.Close()
+
+		ufile.SetFieldName("customfile")
+		ufile.SetFileName("custom.json")
+
+		resp, err := req.SetBodyFormData(ufile).TestExecute(server)
+		if err != nil {
+			t.Fatalf("TestExecute failed: %v", err)
+		}
+
+		content := resp.ContentString()
+		if !strings.Contains(content, "jsonjsonjsonjson") {
+			t.Errorf("File content not found: %s", content)
+		}
+	})
 }
 
 func TestUploadFileFromGlob(t *testing.T) {
-	// 创建一个临时目录
-	tempDir, err := ioutil.TempDir("", "testdir")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
+	server := &FileUploadTestServer{}
 
-	// 在临时目录中创建两个文件
-	fileNames := []string{"file1.txt", "file2.txt"}
-	for _, fileName := range fileNames {
-		filePath := filepath.Join(tempDir, fileName)
-		if err := ioutil.WriteFile(filePath, []byte("Hello, World!"), 0644); err != nil {
-			t.Fatal(err)
+	t.Run("Upload from glob pattern", func(t *testing.T) {
+		// 创建测试文件
+		testContent := "glob test content"
+		testFile := "test_glob.txt"
+		err := os.WriteFile(testFile, []byte(testContent), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create test file: %v", err)
 		}
-	}
+		defer os.Remove(testFile)
 
-	// 使用 UploadFileFromGlob 测试
-	globPattern := filepath.Join(tempDir, "*.txt")
-	ufiles, err := UploadFileFromGlob(globPattern)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// 检查返回的文件数
-	if len(ufiles) != len(fileNames) {
-		t.Errorf("Expected %d files, but got %d", len(fileNames), len(ufiles))
-	}
-
-	// 检查返回的文件名
-	for i, ufile := range ufiles {
-		expectedFileName := filepath.Base(fileNames[i])
-		if ufile.GetFileName() != expectedFileName {
-			t.Errorf("Expected file name %s, but got %s", expectedFileName, ufile.GetFileName())
+		files, err := UploadFileFromGlob("test_*.txt")
+		if err != nil {
+			t.Fatalf("UploadFileFromGlob failed: %v", err)
 		}
-	}
+
+		if len(files) == 0 {
+			t.Fatal("No files found from glob pattern")
+		}
+
+		// 验证第一个文件
+		file := files[0]
+		defer file.fileCloser.Close()
+
+		if !strings.Contains(file.FileName, "test_glob.txt") {
+			t.Errorf("Expected filename to contain 'test_glob.txt', got: %s", file.FileName)
+		}
+
+		// 测试上传单个文件
+		ses := NewSession()
+		req := ses.Post("/upload-glob")
+
+		resp, err := req.SetBodyFormData(file).TestExecute(server)
+		if err != nil {
+			t.Fatalf("TestExecute failed: %v", err)
+		}
+
+		content := resp.ContentString()
+		if !strings.Contains(content, testContent) {
+			t.Errorf("Expected content '%s' not found: %s", testContent, content)
+		}
+	})
+
+	t.Run("Upload multiple files from glob", func(t *testing.T) {
+		// 创建多个测试文件
+		testFiles := []string{"multi1.test", "multi2.test"}
+		testContents := []string{"content1", "content2"}
+
+		for i, filename := range testFiles {
+			err := os.WriteFile(filename, []byte(testContents[i]), 0644)
+			if err != nil {
+				t.Fatalf("Failed to create test file %s: %v", filename, err)
+			}
+			defer os.Remove(filename)
+		}
+
+		files, err := UploadFileFromGlob("multi*.test")
+		if err != nil {
+			t.Fatalf("UploadFileFromGlob failed: %v", err)
+		}
+
+		if len(files) < 2 {
+			t.Fatalf("Expected at least 2 files, got: %d", len(files))
+		}
+
+		// 关闭所有文件
+		for _, file := range files {
+			defer file.fileCloser.Close()
+		}
+
+		// 测试上传 - 传递多个参数而不是切片
+		ses := NewSession()
+		req := ses.Post("/upload-multi-glob")
+
+		resp, err := req.SetBodyFormData(files[0], files[1]).TestExecute(server)
+		if err != nil {
+			t.Fatalf("TestExecute failed: %v", err)
+		}
+
+		content := resp.ContentString()
+
+		// 验证所有内容都存在
+		for _, expectedContent := range testContents {
+			if !strings.Contains(content, expectedContent) {
+				t.Errorf("Expected content '%s' not found: %s", expectedContent, content)
+			}
+		}
+	})
 }

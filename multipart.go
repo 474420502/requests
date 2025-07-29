@@ -419,7 +419,9 @@ func createMultipartEx(params ...interface{}) (*bytes.Buffer, *multipart.Writer)
 				}
 			}
 		case *multipart.Writer, multipart.Writer:
-			panic("only accept single (*)multipart.Writer")
+			// 不安全的版本暂时保留兼容性，但不推荐使用
+			log.Println("Warning: multipart.Writer as parameter is not supported in createMultipartEx, use createMultipartExSafe instead")
+			return bytes.NewBuffer(nil), nil
 		default:
 			if reflect.TypeOf(param).ConvertibleTo(compatibleType) {
 				cparam := reflect.ValueOf(param).Convert(compatibleType)
@@ -448,7 +450,8 @@ func createMultipartEx(params ...interface{}) (*bytes.Buffer, *multipart.Writer)
 
 	err := mwriter.Close()
 	if err != nil {
-		panic(err)
+		log.Printf("Warning: failed to close multipart writer: %v", err)
+		// 返回buffer和writer，让调用者处理
 	}
 
 	// log.Println(string(body.Bytes()))

@@ -201,17 +201,29 @@ func (tp *Temporary) MergeQuery(query url.Values) {
 
 // QueryParam Get the Interface of Query Param. never return nil. 不会返回nil
 func (tp *Temporary) QueryParam(key string) IParam {
-	return &ParamQuery{Temp: tp, Key: key}
+	// 为了向后兼容，创建一个Request适配器
+	req := &Request{
+		parsedURL: tp.ParsedURL,
+	}
+	return &ParamQuery{req: req, Key: key}
 }
 
 // PathParam Path param 使用正则匹配路径参数.  group为参数 eg. /get?page=1&name=xiaoming 不包含?page=1&name=xiaoming
 func (tp *Temporary) PathParam(regexpGroup string) IParam {
-	return extractorParam(tp, regexpGroup, tp.ParsedURL.Path)
+	// 为了向后兼容，创建一个Request适配器
+	req := &Request{
+		parsedURL: tp.ParsedURL,
+	}
+	return extractorParam(req, regexpGroup, tp.ParsedURL.Path)
 }
 
 // HostParam Host param 使用正则匹配Host参数. group为参数 eg.  httpbin.org
 func (tp *Temporary) HostParam(regexpGroup string) IParam {
-	return extractorParam(tp, regexpGroup, tp.ParsedURL.Host)
+	// 为了向后兼容，创建一个Request适配器
+	req := &Request{
+		parsedURL: tp.ParsedURL,
+	}
+	return extractorParam(req, regexpGroup, tp.ParsedURL.Host)
 }
 
 var regexGetPath = regexp.MustCompile("/[^/]*")

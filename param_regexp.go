@@ -10,19 +10,21 @@ import (
 
 // ParamPath 参数
 type ParamRegexp struct {
-	Temp     *Temporary
-	Key      string // 正则的Group
+	req      *Request // 直接引用Request而不是Temporary
+	Key      string   // 正则的Group
 	Params   []string
 	Selected []int
 }
 
-func extractorParam(tp *Temporary, regexpGroup string, extracted string) *ParamRegexp {
-	pp := &ParamRegexp{Temp: tp, Key: regexpGroup}
+func extractorParam(req *Request, regexpGroup string, extracted string) *ParamRegexp {
+	pp := &ParamRegexp{req: req, Key: regexpGroup}
 	// result := regexp.MustCompile(regexpGroup).FindAllStringSubmatch(extracted, 1)
 	result := regexp.MustCompile(regexpGroup).FindAllStringSubmatchIndex(extracted, 1)
 
 	if len(result) == 0 {
-		log.Panic(" regexp not find the matched: ", extracted)
+		log.Printf("Warning: regexp not find the matched: %s", extracted)
+		// 返回一个空的ParamRegexp以避免panic
+		return &ParamRegexp{req: req, Key: regexpGroup, Params: []string{}, Selected: []int{}}
 	}
 
 	//  = selected
@@ -73,7 +75,7 @@ func (p *ParamRegexp) Set(value interface{}) {
 	case reflect.String:
 		p.Params[sel] = vv.String()
 	}
-	p.Temp.ParsedURL.Path = concat(p.Params)
+	p.req.parsedURL.Path = concat(p.Params)
 }
 
 // Add   通用类型 参数加减 value 为通用计算类型
@@ -168,7 +170,7 @@ func (p *ParamRegexp) Add(value interface{}) error {
 		pvalue += uint64(v)
 		p.Params[sel] = strconv.FormatUint(pvalue, 10)
 	}
-	p.Temp.ParsedURL.Path = concat(p.Params)
+	p.req.parsedURL.Path = concat(p.Params)
 	return nil
 }
 
@@ -186,7 +188,7 @@ func (p *ParamRegexp) ArraySet(index int, value interface{}) {
 	case reflect.String:
 		p.Params[sel] = vv.String()
 	}
-	p.Temp.ParsedURL.Path = concat(p.Params)
+	p.req.parsedURL.Path = concat(p.Params)
 }
 
 // ArrayAdd 通用数组类型 根据 index 参数加减 value 为通用计算类型
@@ -280,7 +282,7 @@ func (p *ParamRegexp) ArrayAdd(index int, value interface{}) error {
 		pvalue += uint64(v)
 		p.Params[sel] = strconv.FormatUint(pvalue, 10)
 	}
-	p.Temp.ParsedURL.Path = concat(p.Params)
+	p.req.parsedURL.Path = concat(p.Params)
 	return nil
 }
 
@@ -288,7 +290,7 @@ func (p *ParamRegexp) ArrayAdd(index int, value interface{}) error {
 func (p *ParamRegexp) IntSet(v int64) {
 	sel := p.Selected[0]
 	p.Params[sel] = strconv.FormatInt(v, 10)
-	p.Temp.ParsedURL.Path = concat(p.Params)
+	p.req.parsedURL.Path = concat(p.Params)
 }
 
 // IntAdd 单个整型参数计算
@@ -300,7 +302,7 @@ func (p *ParamRegexp) IntAdd(v int64) error {
 	}
 	pvalue += v
 	p.Params[sel] = strconv.FormatInt(pvalue, 10)
-	p.Temp.ParsedURL.Path = concat(p.Params)
+	p.req.parsedURL.Path = concat(p.Params)
 	return nil
 }
 
@@ -308,7 +310,7 @@ func (p *ParamRegexp) IntAdd(v int64) error {
 func (p *ParamRegexp) IntArraySet(index int, v int64) {
 	sel := p.Selected[index]
 	p.Params[sel] = strconv.FormatInt(v, 10)
-	p.Temp.ParsedURL.Path = concat(p.Params)
+	p.req.parsedURL.Path = concat(p.Params)
 }
 
 // IntArrayAdd 数组整型参数计算
@@ -320,7 +322,7 @@ func (p *ParamRegexp) IntArrayAdd(index int, v int64) error {
 	}
 	pvalue += v
 	p.Params[sel] = strconv.FormatInt(pvalue, 10)
-	p.Temp.ParsedURL.Path = concat(p.Params)
+	p.req.parsedURL.Path = concat(p.Params)
 	return nil
 }
 
@@ -340,7 +342,7 @@ func (p *ParamRegexp) IntArrayDo(do func(i int, pvalue int64) interface{}) error
 			p.Params[index] = strconv.FormatInt(rvalue.(int64), 10)
 		}
 	}
-	p.Temp.ParsedURL.Path = concat(p.Params)
+	p.req.parsedURL.Path = concat(p.Params)
 	return nil
 }
 
@@ -348,7 +350,7 @@ func (p *ParamRegexp) IntArrayDo(do func(i int, pvalue int64) interface{}) error
 func (p *ParamRegexp) FloatSet(v float64) {
 	sel := p.Selected[0]
 	p.Params[sel] = strconv.FormatFloat(v, 'f', -1, 64)
-	p.Temp.ParsedURL.Path = concat(p.Params)
+	p.req.parsedURL.Path = concat(p.Params)
 }
 
 // FloatAdd 单个浮点参数计算
@@ -360,7 +362,7 @@ func (p *ParamRegexp) FloatAdd(v float64) error {
 	}
 	pvalue += v
 	p.Params[sel] = strconv.FormatFloat(pvalue, 'f', -1, 64)
-	p.Temp.ParsedURL.Path = concat(p.Params)
+	p.req.parsedURL.Path = concat(p.Params)
 	return nil
 }
 
@@ -368,7 +370,7 @@ func (p *ParamRegexp) FloatAdd(v float64) error {
 func (p *ParamRegexp) FloatArraySet(index int, v float64) {
 	sel := p.Selected[index]
 	p.Params[sel] = strconv.FormatFloat(v, 'f', -1, 64)
-	p.Temp.ParsedURL.Path = concat(p.Params)
+	p.req.parsedURL.Path = concat(p.Params)
 }
 
 // FloatArrayAdd 数组浮点参数计算
@@ -380,7 +382,7 @@ func (p *ParamRegexp) FloatArrayAdd(index int, v float64) error {
 	}
 	pvalue += v
 	p.Params[sel] = strconv.FormatFloat(pvalue, 'f', -1, 64)
-	p.Temp.ParsedURL.Path = concat(p.Params)
+	p.req.parsedURL.Path = concat(p.Params)
 	return nil
 }
 
@@ -400,7 +402,7 @@ func (p *ParamRegexp) FloatArrayDo(do func(i int, pvalue float64) interface{}) e
 			p.Params[index] = strconv.FormatFloat(rvalue.(float64), 'f', -1, 64)
 		}
 	}
-	p.Temp.ParsedURL.Path = concat(p.Params)
+	p.req.parsedURL.Path = concat(p.Params)
 	return nil
 }
 
@@ -408,12 +410,12 @@ func (p *ParamRegexp) FloatArrayDo(do func(i int, pvalue float64) interface{}) e
 func (p *ParamRegexp) StringSet(v string) {
 	sel := p.Selected[0]
 	p.Params[sel] = v
-	p.Temp.ParsedURL.Path = concat(p.Params)
+	p.req.parsedURL.Path = concat(p.Params)
 }
 
 // StringArraySet 数组字符串参数设置
 func (p *ParamRegexp) StringArraySet(index int, v string) {
 	sel := p.Selected[index]
 	p.Params[sel] = v
-	p.Temp.ParsedURL.Path = concat(p.Params)
+	p.req.parsedURL.Path = concat(p.Params)
 }

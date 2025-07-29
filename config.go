@@ -3,11 +3,10 @@ package requests
 import (
 	"context"
 	"crypto/tls"
-	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
-	"reflect"
 	"time"
 
 	netproxy "golang.org/x/net/proxy"
@@ -18,8 +17,64 @@ type Config struct {
 	ses *Session
 }
 
-// SetBasicAuth 可以 User, Password or *BasicAuth or BasicAuth or nil(clear)
-func (cfg *Config) SetBasicAuth(values ...interface{}) {
+// SetBasicAuth 设置基础认证，支持多种参数形式以保持向后兼容性
+func (cfg *Config) SetBasicAuth(args ...interface{}) error {
+	if cfg.ses.auth == nil {
+		cfg.ses.auth = &BasicAuth{}
+	}
+
+	switch len(args) {
+	case 1:
+		switch v := args[0].(type) {
+		case *BasicAuth:
+			if v == nil {
+				cfg.ses.auth = nil
+			} else {
+				cfg.ses.auth.User = v.User
+				cfg.ses.auth.Password = v.Password
+			}
+		case BasicAuth:
+			cfg.ses.auth.User = v.User
+			cfg.ses.auth.Password = v.Password
+		case nil:
+			cfg.ses.auth = nil
+		default:
+			return fmt.Errorf("unsupported basic auth type: %T", v)
+		}
+	case 2:
+		user, ok := args[0].(string)
+		if !ok {
+			return fmt.Errorf("first argument must be string, got %T", args[0])
+		}
+		password, ok := args[1].(string)
+		if !ok {
+			return fmt.Errorf("second argument must be string, got %T", args[1])
+		}
+		cfg.ses.auth.User = user
+		cfg.ses.auth.Password = password
+	default:
+		return fmt.Errorf("invalid number of arguments: %d", len(args))
+	}
+	return nil
+}
+
+// SetBasicAuthString 设置基础认证（推荐的类型安全方法）
+func (cfg *Config) SetBasicAuthString(user, password string) {
+	if cfg.ses.auth == nil {
+		cfg.ses.auth = &BasicAuth{}
+	}
+	cfg.ses.auth.User = user
+	cfg.ses.auth.Password = password
+}
+
+// ClearBasicAuth 清除基础认证
+func (cfg *Config) ClearBasicAuth() {
+	cfg.ses.auth = nil
+}
+
+// SetBasicAuthLegacy 可以 User, Password or *BasicAuth or BasicAuth or nil(clear)
+// Deprecated: 使用 SetBasicAuth(user, password string) 或 ClearBasicAuth() 代替
+func (cfg *Config) SetBasicAuthLegacy(values ...interface{}) error {
 	if cfg.ses.auth == nil {
 		cfg.ses.auth = &BasicAuth{}
 	}
@@ -36,12 +91,23 @@ func (cfg *Config) SetBasicAuth(values ...interface{}) {
 		case nil:
 			cfg.ses.auth = nil
 		default:
-			panic(errors.New("error type " + reflect.TypeOf(v).String()))
+			return fmt.Errorf("unsupported basic auth type: %T", v)
 		}
 	case 2:
-		cfg.ses.auth.User = values[0].(string)
-		cfg.ses.auth.Password = values[1].(string)
+		user, ok := values[0].(string)
+		if !ok {
+			return fmt.Errorf("first argument must be string, got %T", values[0])
+		}
+		password, ok := values[1].(string)
+		if !ok {
+			return fmt.Errorf("second argument must be string, got %T", values[1])
+		}
+		cfg.ses.auth.User = user
+		cfg.ses.auth.Password = password
+	default:
+		return fmt.Errorf("invalid number of arguments: %d", len(values))
 	}
+	return nil
 }
 
 // SetTLSConfig 默认 string or *url.URL or nil
@@ -54,42 +120,57 @@ func (cfg *Config) SetInsecure(is bool) {
 	cfg.ses.transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: is}
 }
 
-// SetProxy 默认 string or *url.URL or nil
-func (cfg *Config) SetProxy(proxy interface{}) {
+// SetProxy 设置代理，返回error而不是panic
+func (cfg *Config) SetProxy(proxy interface{}) error {
 	switch v := proxy.(type) {
 	case string:
-		purl, err := (url.Parse(v))
+		purl, err := url.Parse(v)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("invalid proxy URL: %w", err)
 		}
-		if purl.Scheme == "socks5" {
-			cfg.ses.transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-				dialer, err := netproxy.SOCKS5("tcp", purl.Host, nil, netproxy.Direct)
-				if err != nil {
-					return nil, err
-				}
-				return dialer.Dial(network, addr)
-			}
-		} else {
-			cfg.ses.transport.Proxy = http.ProxyURL(purl)
-		}
+		return cfg.setProxyURL(purl)
 	case *url.URL:
-		if v.Scheme == "socks5" {
-			cfg.ses.transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-				dialer, err := netproxy.SOCKS5("tcp", v.Host, nil, netproxy.Direct)
-				if err != nil {
-					return nil, err
-				}
-				return dialer.Dial(network, addr)
-			}
-		} else {
-			cfg.ses.transport.Proxy = http.ProxyURL(v)
-		}
+		return cfg.setProxyURL(v)
 	case nil:
 		cfg.ses.transport.Proxy = nil
+		return nil
 	default:
-		panic(errors.New("error type " + reflect.TypeOf(v).String()))
+		return fmt.Errorf("unsupported proxy type: %T", v)
 	}
+}
+
+// SetProxyString 类型安全的代理设置方法（推荐使用）
+func (cfg *Config) SetProxyString(proxyURL string) error {
+	if proxyURL == "" {
+		cfg.ses.transport.Proxy = nil
+		return nil
+	}
+	purl, err := url.Parse(proxyURL)
+	if err != nil {
+		return fmt.Errorf("parse proxy URL: %w", err)
+	}
+	return cfg.setProxyURL(purl)
+}
+
+// ClearProxy 清除代理设置
+func (cfg *Config) ClearProxy() {
+	cfg.ses.transport.Proxy = nil
+}
+
+// setProxyURL 内部方法处理URL代理设置
+func (cfg *Config) setProxyURL(purl *url.URL) error {
+	if purl.Scheme == "socks5" {
+		cfg.ses.transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			dialer, err := netproxy.SOCKS5("tcp", purl.Host, nil, netproxy.Direct)
+			if err != nil {
+				return nil, err
+			}
+			return dialer.Dial(network, addr)
+		}
+	} else {
+		cfg.ses.transport.Proxy = http.ProxyURL(purl)
+	}
+	return nil
 }
 
 // SetWithCookiejar 默认使用cookiejar false 不是用session client jar作为cookie传递
@@ -128,8 +209,8 @@ func (cfg *Config) SetContentEncoding(ct ContentEncodingType) {
 	cfg.ses.contentEncoding = ct
 }
 
-// SetConfig 设置配置
-func (cfg *Config) SetTimeout(t interface{}) {
+// SetTimeout 设置超时时间，返回error而不是panic
+func (cfg *Config) SetTimeout(t interface{}) error {
 	switch v := t.(type) {
 	case time.Duration:
 		cfg.ses.client.Timeout = v
@@ -142,9 +223,19 @@ func (cfg *Config) SetTimeout(t interface{}) {
 	case float64:
 		cfg.ses.client.Timeout = time.Duration(v * float64(time.Second))
 	default:
-		panic(errors.New("error type " + reflect.TypeOf(v).String()))
+		return fmt.Errorf("unsupported timeout type: %T", v)
 	}
+	return nil
+}
 
+// SetTimeoutDuration 设置超时时间（推荐使用此方法）
+func (cfg *Config) SetTimeoutDuration(timeout time.Duration) {
+	cfg.ses.client.Timeout = timeout
+}
+
+// SetTimeoutSeconds 设置超时时间（秒）
+func (cfg *Config) SetTimeoutSeconds(seconds int) {
+	cfg.ses.client.Timeout = time.Duration(seconds) * time.Second
 }
 
 // SetHeaderAuthorization method is used to add the JWT token's Authorization field to the HTTP header in the ses field of the Config structure.

@@ -9,13 +9,8 @@ import (
 	"github.com/474420502/requests"
 )
 
-func main() {
-	// 展示改进后的API设计
-	demonstrateImprovedAPI()
-}
-
 func demonstrateImprovedAPI() {
-	fmt.Println("=== 改进后的 Go Requests 库 API 演示 ===\n")
+	fmt.Println("=== 改进后的 Go Requests 库 API 演示 ===")
 
 	// 1. 函数式选项模式创建Session
 	fmt.Println("1. 使用函数式选项创建Session:")

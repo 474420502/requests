@@ -59,10 +59,13 @@ func buildBodyRequest(tp *Temporary) (*http.Request, error) {
 		case ContentEncodingGzip:
 			tp.Header.Add("Content-Encoding", "gzip")
 			w := gzip.NewWriter(buf)
-			w.Write(tp.Body.Bytes())
+			_, err := w.Write(tp.Body.Bytes())
+			if err != nil {
+				return nil, err
+			}
 			err = w.Close()
 			if err != nil {
-				panic(err)
+				return nil, err
 			}
 		case ContentEncodingDeflate:
 			tp.Header.Add("Content-Encoding", "deflate")

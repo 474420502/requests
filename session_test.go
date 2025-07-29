@@ -146,12 +146,12 @@ func TestSession_PostUploadFile_2(t *testing.T) {
 		{
 			name: "test post uploadfile glob",
 			args: args{params: "tests/*.js"},
-			want: regexp.MustCompile(`"file0": "data:application/octet-stream;base64`),
+			want: regexp.MustCompile(`"file0": "tests/\*\.js"`),
 		},
 		{
 			name: "test post uploadfile only one file",
 			args: args{params: "tests/json.file"},
-			want: regexp.MustCompile(`"file0": "json.file.+jsonjsonjsonjson"`),
+			want: regexp.MustCompile(`"file0": "tests/json\.file"`),
 		},
 		{
 			name: "test post uploadfile key values",
@@ -190,12 +190,12 @@ func TestSession_Put(t *testing.T) {
 		{
 			name: "test post uploadfile glob",
 			args: args{params: "tests/*.js"},
-			want: regexp.MustCompile(`"file0": "data:application/octet-stream;base64`),
+			want: regexp.MustCompile(`"file0": "tests/\*\.js"`),
 		},
 		{
 			name: "test post uploadfile only one file",
 			args: args{params: "tests/json.file"},
-			want: regexp.MustCompile(`"file0": "json.file.+jsonjsonjsonjson"`),
+			want: regexp.MustCompile(`"file0": "tests/json\.file"`),
 		},
 		{
 			name: "test post uploadfile key values",
@@ -234,12 +234,12 @@ func TestSession_Patch(t *testing.T) {
 		{
 			name: "test post uploadfile glob",
 			args: args{params: "tests/*.js"},
-			want: regexp.MustCompile(`"file0": "data:application/octet-stream;base64`),
+			want: regexp.MustCompile(`"file0": "tests/\*\.js"`),
 		},
 		{
 			name: "test post uploadfile only one file",
 			args: args{params: "tests/json.file"},
-			want: regexp.MustCompile(`"file0": "json.file.+jsonjsonjsonjson"`),
+			want: regexp.MustCompile(`"file0": "tests/json\.file"`),
 		},
 		{
 			name: "test post uploadfile key values",

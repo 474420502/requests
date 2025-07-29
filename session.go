@@ -1,6 +1,7 @@
 package requests
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -221,14 +222,15 @@ func (ses *Session) DelCookies(u *url.URL, name string) {
 	ses.SetCookies(u, cookies)
 }
 
-// ClearCookies 清楚所有cookiejar上的cookies
-func (ses *Session) ClearCookies() {
+// ClearCookies 清除所有cookiejar上的cookies
+func (ses *Session) ClearCookies() error {
 	cjar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to create new cookie jar: %w", err)
 	}
 	ses.cookiejar = cjar
 	ses.client.Jar = ses.cookiejar
+	return nil
 }
 
 // AddMiddleware 添加中间件到Session

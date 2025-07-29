@@ -9,8 +9,8 @@ import (
 
 // ParamQuery 参数
 type ParamQuery struct {
-	Temp *Temporary
-	Key  string
+	req *Request // 直接引用Request而不是Temporary
+	Key string
 }
 
 // case string:
@@ -25,7 +25,7 @@ type ParamQuery struct {
 
 // Set 单个整型参数设置
 func (p *ParamQuery) Set(value interface{}) {
-	values := p.Temp.GetQuery()
+	values := p.req.GetQuery()
 
 	vv := reflect.ValueOf(value)
 	switch k := vv.Kind(); k {
@@ -38,12 +38,12 @@ func (p *ParamQuery) Set(value interface{}) {
 	case reflect.String:
 		values.Set(p.Key, vv.String())
 	}
-	p.Temp.SetQuery(values)
+	p.req.SetQuery(values)
 }
 
 // Add   通用类型 参数加减 value 为通用计算类型
 func (p *ParamQuery) Add(value interface{}) error {
-	values := p.Temp.GetQuery()
+	values := p.req.GetQuery()
 	vs := values[p.Key]
 
 	switch v := value.(type) {
@@ -133,14 +133,14 @@ func (p *ParamQuery) Add(value interface{}) error {
 		pvalue += uint64(v)
 		values.Set(p.Key, strconv.FormatUint(pvalue, 10))
 	}
-	p.Temp.SetQuery(values)
+	p.req.SetQuery(values)
 	return nil
 }
 
 // ArraySet 通用数组类型 根据 index 设置 value 为通用计算类型
 func (p *ParamQuery) ArraySet(index int, value interface{}) {
 
-	values := p.Temp.GetQuery()
+	values := p.req.GetQuery()
 	vs := values[p.Key]
 
 	vv := reflect.ValueOf(value)
@@ -155,12 +155,12 @@ func (p *ParamQuery) ArraySet(index int, value interface{}) {
 		vs[index] = vv.String()
 	}
 
-	p.Temp.SetQuery(values)
+	p.req.SetQuery(values)
 }
 
 // ArrayAdd 通用数组类型 根据 index 参数加减 value 为通用计算类型
 func (p *ParamQuery) ArrayAdd(index int, value interface{}) error {
-	values := p.Temp.GetQuery()
+	values := p.req.GetQuery()
 	vs := values[p.Key]
 
 	switch v := value.(type) {
@@ -261,20 +261,20 @@ func (p *ParamQuery) ArrayAdd(index int, value interface{}) error {
 		vs[index] = strconv.FormatUint(pvalue, 10)
 
 	}
-	p.Temp.SetQuery(values)
+	p.req.SetQuery(values)
 	return nil
 }
 
 // IntSet 单个整型参数设置
 func (p *ParamQuery) IntSet(v int64) {
-	values := p.Temp.GetQuery()
+	values := p.req.GetQuery()
 	values.Set(p.Key, strconv.FormatInt(v, 10))
-	p.Temp.SetQuery(values)
+	p.req.SetQuery(values)
 }
 
 // IntAdd 单个整型参数计算
 func (p *ParamQuery) IntAdd(v int64) error {
-	values := p.Temp.GetQuery()
+	values := p.req.GetQuery()
 	vs := values[p.Key]
 	pvalue, err := strconv.ParseInt(vs[0], 10, 64)
 	if err != nil {
@@ -282,21 +282,21 @@ func (p *ParamQuery) IntAdd(v int64) error {
 	}
 	pvalue += v
 	values.Set(p.Key, strconv.FormatInt(pvalue, 10))
-	p.Temp.SetQuery(values)
+	p.req.SetQuery(values)
 	return nil
 }
 
 // IntArraySet 数组整型参数计算
 func (p *ParamQuery) IntArraySet(index int, v int64) {
-	values := p.Temp.GetQuery()
+	values := p.req.GetQuery()
 	vs := values[p.Key]
 	vs[index] = strconv.FormatInt(v, 10)
-	p.Temp.SetQuery(values)
+	p.req.SetQuery(values)
 }
 
 // IntArrayAdd 数组整型参数计算
 func (p *ParamQuery) IntArrayAdd(index int, v int64) error {
-	values := p.Temp.GetQuery()
+	values := p.req.GetQuery()
 	vs := values[p.Key]
 	pvalue, err := strconv.ParseInt(vs[index], 10, 64)
 	if err != nil {
@@ -304,13 +304,13 @@ func (p *ParamQuery) IntArrayAdd(index int, v int64) error {
 	}
 	pvalue += v
 	vs[index] = strconv.FormatInt(pvalue, 10)
-	p.Temp.SetQuery(values)
+	p.req.SetQuery(values)
 	return nil
 }
 
 // IntArrayDo 数组整型参数操作 do i 数组索引 pvalue 数组值 返回值interface{} 如果nil. 则不变
 func (p *ParamQuery) IntArrayDo(do func(i int, pvalue int64) interface{}) error {
-	values := p.Temp.GetQuery()
+	values := p.req.GetQuery()
 	vs := values[p.Key]
 	for i, v := range vs {
 		pvalue, err := strconv.ParseInt(v, 10, 64)
@@ -325,20 +325,20 @@ func (p *ParamQuery) IntArrayDo(do func(i int, pvalue int64) interface{}) error 
 			vs[i] = strconv.FormatInt(rvalue.(int64), 10)
 		}
 	}
-	p.Temp.SetQuery(values)
+	p.req.SetQuery(values)
 	return nil
 }
 
 // FloatSet 单个浮点参数设置
 func (p *ParamQuery) FloatSet(v float64) {
-	values := p.Temp.GetQuery()
+	values := p.req.GetQuery()
 	values.Set(p.Key, strconv.FormatFloat(v, 'f', -1, 64))
-	p.Temp.SetQuery(values)
+	p.req.SetQuery(values)
 }
 
 // FloatAdd 单个浮点参数计算
 func (p *ParamQuery) FloatAdd(v float64) error {
-	values := p.Temp.GetQuery()
+	values := p.req.GetQuery()
 	vs := values[p.Key]
 	pvalue, err := strconv.ParseFloat(vs[0], 64)
 	if err != nil {
@@ -346,21 +346,21 @@ func (p *ParamQuery) FloatAdd(v float64) error {
 	}
 	pvalue += v
 	values.Set(p.Key, strconv.FormatFloat(pvalue, 'f', -1, 64))
-	p.Temp.SetQuery(values)
+	p.req.SetQuery(values)
 	return nil
 }
 
 // FloatArraySet 数组浮点参数设置
 func (p *ParamQuery) FloatArraySet(index int, v float64) {
-	values := p.Temp.GetQuery()
+	values := p.req.GetQuery()
 	vs := values[p.Key]
 	vs[index] = strconv.FormatFloat(v, 'f', -1, 64)
-	p.Temp.SetQuery(values)
+	p.req.SetQuery(values)
 }
 
 // FloatArrayAdd 数组浮点参数计算
 func (p *ParamQuery) FloatArrayAdd(index int, v float64) error {
-	values := p.Temp.GetQuery()
+	values := p.req.GetQuery()
 	vs := values[p.Key]
 	pvalue, err := strconv.ParseFloat(vs[index], 64)
 	if err != nil {
@@ -368,13 +368,13 @@ func (p *ParamQuery) FloatArrayAdd(index int, v float64) error {
 	}
 	pvalue += v
 	vs[index] = strconv.FormatFloat(pvalue, 'f', -1, 64)
-	p.Temp.SetQuery(values)
+	p.req.SetQuery(values)
 	return nil
 }
 
 // FloatArrayDo 数组整型参数操作 do i 数组索引 pvalue 数组值 返回值interface{} 如果nil. 则不变
 func (p *ParamQuery) FloatArrayDo(do func(i int, pvalue float64) interface{}) error {
-	values := p.Temp.GetQuery()
+	values := p.req.GetQuery()
 	vs := values[p.Key]
 	for i, v := range vs {
 		pvalue, err := strconv.ParseFloat(v, 64)
@@ -389,21 +389,21 @@ func (p *ParamQuery) FloatArrayDo(do func(i int, pvalue float64) interface{}) er
 			vs[i] = strconv.FormatFloat(rvalue.(float64), 'f', -1, 64)
 		}
 	}
-	p.Temp.SetQuery(values)
+	p.req.SetQuery(values)
 	return nil
 }
 
 // StringSet 字符串参数设置
 func (p *ParamQuery) StringSet(v string) {
-	values := p.Temp.GetQuery()
+	values := p.req.GetQuery()
 	values.Set(p.Key, v)
-	p.Temp.SetQuery(values)
+	p.req.SetQuery(values)
 }
 
 // StringArraySet 数组字符串参数设置
 func (p *ParamQuery) StringArraySet(index int, v string) {
-	values := p.Temp.GetQuery()
+	values := p.req.GetQuery()
 	vs := values[p.Key]
 	vs[index] = v
-	p.Temp.SetQuery(values)
+	p.req.SetQuery(values)
 }
