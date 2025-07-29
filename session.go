@@ -58,6 +58,9 @@ type Session struct {
 	Query  url.Values
 
 	Is IsSetting
+
+	// middlewares 中间件列表
+	middlewares []Middleware
 }
 
 const (
@@ -142,11 +145,23 @@ func NewSession() *Session {
 	client.Transport = transport
 	cjar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
-		panic(err)
+		// 如果无法创建cookie jar，我们仍然可以创建一个可用的Session，只是没有cookie支持
+		// 这比直接panic更好
+		client.Jar = nil
+	} else {
+		client.Jar = cjar
 	}
 
-	client.Jar = cjar
-	return &Session{client: client, transport: transport, auth: nil, cookiejar: client.Jar, Header: make(http.Header), Is: IsSetting{true}, acceptEncoding: []AcceptEncodingType{}, contentEncoding: ContentEncodingNoCompress}
+	return &Session{
+		client:          client,
+		transport:       transport,
+		auth:            nil,
+		cookiejar:       client.Jar,
+		Header:          make(http.Header),
+		Is:              IsSetting{true},
+		acceptEncoding:  []AcceptEncodingType{},
+		contentEncoding: ContentEncodingNoCompress,
+	}
 }
 
 // Config 配置Reqeusts类集合
@@ -216,67 +231,64 @@ func (ses *Session) ClearCookies() {
 	ses.client.Jar = ses.cookiejar
 }
 
-// Head 请求
-func (ses *Session) Head(url string) *Temporary {
-	wf := NewTemporary(ses, url)
-	wf.Method = "HEAD"
-	return wf
+// AddMiddleware 添加中间件到Session
+func (ses *Session) AddMiddleware(middleware Middleware) {
+	ses.middlewares = append(ses.middlewares, middleware)
 }
 
-// Get 请求
-func (ses *Session) Get(url string) *Temporary {
-	wf := NewTemporary(ses, url)
-	wf.Method = "GET"
-	return wf
+// SetMiddlewares 设置Session的中间件列表
+func (ses *Session) SetMiddlewares(middlewares []Middleware) {
+	ses.middlewares = middlewares
 }
 
-// Post 请求
-func (ses *Session) Post(url string) *Temporary {
-	wf := NewTemporary(ses, url)
-	wf.Method = "POST"
-	return wf
+// GetMiddlewares 获取Session的中间件列表
+func (ses *Session) GetMiddlewares() []Middleware {
+	return ses.middlewares
 }
 
-// Put 请求
-func (ses *Session) Put(url string) *Temporary {
-	wf := NewTemporary(ses, url)
-	wf.Method = "PUT"
-	return wf
+// Head 请求 - 统一返回 Request 对象
+func (ses *Session) Head(url string) *Request {
+	return NewRequest(ses, "HEAD", url)
 }
 
-// Patch 请求
-func (ses *Session) Patch(url string) *Temporary {
-	wf := NewTemporary(ses, url)
-	wf.Method = "PATCH"
-	return wf
+// Get 请求 - 统一返回 Request 对象
+func (ses *Session) Get(url string) *Request {
+	return NewRequest(ses, "GET", url)
 }
 
-// Options 请求
-func (ses *Session) Options(url string) *Temporary {
-	wf := NewTemporary(ses, url)
-	wf.Method = "OPTIONS"
-	return wf
+// Post 请求 - 统一返回 Request 对象
+func (ses *Session) Post(url string) *Request {
+	return NewRequest(ses, "POST", url)
 }
 
-// Delete 请求
-func (ses *Session) Delete(url string) *Temporary {
-	wf := NewTemporary(ses, url)
-	wf.Method = "DELETE"
-	return wf
+// Put 请求 - 统一返回 Request 对象
+func (ses *Session) Put(url string) *Request {
+	return NewRequest(ses, "PUT", url)
 }
 
-// Connect 请求
-func (ses *Session) Connect(url string) *Temporary {
-	wf := NewTemporary(ses, url)
-	wf.Method = "CONNECT"
-	return wf
+// Patch 请求 - 统一返回 Request 对象
+func (ses *Session) Patch(url string) *Request {
+	return NewRequest(ses, "PATCH", url)
 }
 
-// Trace 请求
-func (ses *Session) Trace(url string) *Temporary {
-	wf := NewTemporary(ses, url)
-	wf.Method = "TRACE"
-	return wf
+// Options 请求 - 统一返回 Request 对象
+func (ses *Session) Options(url string) *Request {
+	return NewRequest(ses, "OPTIONS", url)
+}
+
+// Delete 请求 - 统一返回 Request 对象
+func (ses *Session) Delete(url string) *Request {
+	return NewRequest(ses, "DELETE", url)
+}
+
+// Connect 请求 - 统一返回 Request 对象
+func (ses *Session) Connect(url string) *Request {
+	return NewRequest(ses, "CONNECT", url)
+}
+
+// Trace 请求 - 统一返回 Request 对象
+func (ses *Session) Trace(url string) *Request {
+	return NewRequest(ses, "TRACE", url)
 }
 
 // // CloseIdleConnections  closes the idle connections that a session client may make use of

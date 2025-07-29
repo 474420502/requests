@@ -10,9 +10,9 @@ type RequestPool struct {
 	runnerCount int
 	isBar       bool
 
-	temps []*Temporary
-	lock  sync.Mutex
-	sem   chan int
+	requests []*Request
+	lock     sync.Mutex
+	sem      chan int
 }
 
 type MultiResponse struct {
@@ -28,9 +28,9 @@ func NewRequestPool(runnerCount int) *RequestPool {
 	}
 }
 
-func (pl *RequestPool) Add(tp *Temporary) {
+func (pl *RequestPool) Add(req *Request) {
 	pl.lock.Lock()
-	pl.temps = append(pl.temps, tp)
+	pl.requests = append(pl.requests, req)
 	pl.lock.Unlock()
 }
 
@@ -44,31 +44,32 @@ func (pl *RequestPool) Execute() []*MultiResponse {
 	pl.lock.Lock()
 	defer pl.lock.Unlock()
 
-	respChan := make(chan *MultiResponse, len(pl.temps))
+	respChan := make(chan *MultiResponse, len(pl.requests))
 	var result []*MultiResponse
 
 	var bar *progressbar.ProgressBar
 	if pl.isBar {
-		bar = progressbar.New(len(pl.temps))
+		bar = progressbar.New(len(pl.requests))
 	}
 
-	for i, tp := range pl.temps {
+	for i, req := range pl.requests {
 		pl.sem <- 1
 
-		go func(i int, tp *Temporary) {
+		go func(i int, req *Request) {
 			defer func() {
 				<-pl.sem
-				if pl.isBar {
-					bar.Add(1) // 完成一个请求则进度+1
-				}
 			}()
-			r, err := tp.Execute()
-			respChan <- &MultiResponse{Response: r, Error: err}
-		}(i, tp)
+
+			resp, err := req.Execute()
+			respChan <- &MultiResponse{Response: resp, Error: err}
+
+			if bar != nil {
+				bar.Add(1)
+			}
+		}(i, req)
 	}
 
-	// 从channel中接收响应,超时则退出循环
-	for range pl.temps {
+	for range pl.requests {
 		result = append(result, <-respChan)
 	}
 

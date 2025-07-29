@@ -10,7 +10,7 @@ import (
 	"github.com/474420502/random"
 )
 
-func checkArrayParam(tp *Temporary, param string, vaild string) error {
+func checkArrayParam(tp *Request, param string, vaild string) error {
 
 	resp, err := tp.Execute()
 	if err != nil {
@@ -42,7 +42,7 @@ func checkArrayParam(tp *Temporary, param string, vaild string) error {
 	return nil
 }
 
-func checkParam(tp *Temporary, param string, vaild string) error {
+func checkParam(tp *Request, param string, vaild string) error {
 
 	resp, err := tp.Execute()
 	if err != nil {
@@ -275,7 +275,7 @@ func TestParamHost(t *testing.T) {
 	}
 }
 
-func checkBaseTypeParamSet(tp *Temporary, r *random.Random, t *testing.T) {
+func checkBaseTypeParamSet(tp *Request, r *random.Random, t *testing.T) {
 	p := tp.QueryParam("page")
 	var v interface{}
 	var err error
@@ -375,7 +375,7 @@ func checkBaseTypeParamSet(tp *Temporary, r *random.Random, t *testing.T) {
 
 }
 
-func checkBaseTypeParamRegexpSet(tp *Temporary, r *random.Random, t *testing.T) {
+func checkBaseTypeParamRegexpSet(tp *Request, r *random.Random, t *testing.T) {
 	p := tp.PathParam(`Page-([0-9.]+)-([0-9.]+)`)
 	var v interface{}
 
@@ -478,7 +478,7 @@ func checkBaseTypeParamRegexpSet(tp *Temporary, r *random.Random, t *testing.T) 
 
 }
 
-func checkBaseTypeParamRegexpArraySet(tp *Temporary, r *random.Random, t *testing.T) {
+func checkBaseTypeParamRegexpArraySet(tp *Request, r *random.Random, t *testing.T) {
 	p := tp.PathParam(`Page-([0-9.]+)-([0-9.]+)`)
 	var v interface{}
 
@@ -580,7 +580,7 @@ func checkBaseTypeParamRegexpArraySet(tp *Temporary, r *random.Random, t *testin
 
 }
 
-func checkBaseTypeParamAdd(tp *Temporary, r *random.Random, t *testing.T) {
+func checkBaseTypeParamAdd(tp *Request, r *random.Random, t *testing.T) {
 	p := tp.QueryParam("page")
 	var v interface{}
 	var err error
@@ -702,7 +702,7 @@ func checkBaseTypeParamAdd(tp *Temporary, r *random.Random, t *testing.T) {
 
 }
 
-func checkBaseTypeParamRegexpAdd(tp *Temporary, r *random.Random, t *testing.T) {
+func checkBaseTypeParamRegexpAdd(tp *Request, r *random.Random, t *testing.T) {
 	p := tp.PathParam(`Page-([0-9.]+)-([0-9.]+)`)
 
 	var v interface{}
@@ -827,7 +827,7 @@ func checkBaseTypeParamRegexpAdd(tp *Temporary, r *random.Random, t *testing.T) 
 
 }
 
-func checkBaseTypeParamRegexpArrayAdd(tp *Temporary, r *random.Random, t *testing.T) {
+func checkBaseTypeParamRegexpArrayAdd(tp *Request, r *random.Random, t *testing.T) {
 	p := tp.PathParam(`Page-([0-9.]+)-([0-9.]+)`)
 
 	var v interface{}

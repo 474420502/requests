@@ -17,7 +17,7 @@ func TestTemporary(t *testing.T) {
 	ses := NewSession()
 
 	t.Run("set cookie", func(t *testing.T) {
-		resp, err := ses.Get("http://httpbin.org/cookies/set").SetCookieKV("a", "1").Execute()
+		resp, err := ses.Get("http://httpbin.org/cookies/set").SetCookieValue("a", "1").Execute()
 		if err != nil {
 			t.Error("cookies set error", err)
 		}
@@ -27,7 +27,7 @@ func TestTemporary(t *testing.T) {
 		}
 
 		wf := ses.Get("http://httpbin.org/cookies/set")
-		resp, err = wf.SetCookieKV("b", "2").Execute()
+		resp, err = wf.SetCookieValue("b", "2").Execute()
 		if err != nil {
 			t.Error("cookies set error", err)
 		}
@@ -42,7 +42,7 @@ func TestTemporary(t *testing.T) {
 			t.Error(string(resp.Content()))
 		}
 
-		resp, err = wf.SetCookieKV("a", "3").Execute()
+		resp, err = wf.SetCookieValue("a", "3").Execute()
 		results := gjson.GetMany(string(resp.Content()), "cookies.a", "cookies.b")
 		if results[0].Int() != 3 {
 			t.Error(string(resp.Content()))
@@ -73,7 +73,7 @@ func TestTemporary_SetHeader(t *testing.T) {
 	header = make(http.Header)
 	header["Eson"] = []string{"Bad"}
 	header["HaHa"] = []string{"xixi"}
-	wf.SetHeader(header)
+	wf.SetHeadersFromHTTP(header)
 
 	resp, err := wf.Execute()
 	if err == nil && gjson.Get(string(resp.Content()), "headers.Eson").String() != "Bad" {

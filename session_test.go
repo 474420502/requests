@@ -339,7 +339,7 @@ func TestSession_Cookies(t *testing.T) {
 	ses := NewSession()
 
 	t.Run("set cookie", func(t *testing.T) {
-		resp, err := ses.Get("http://httpbin.org/cookies/set").SetCookieKV("a", "1").Execute()
+		resp, err := ses.Get("http://httpbin.org/cookies/set").SetCookieValue("a", "1").Execute()
 		if err != nil {
 			t.Error("cookies set error", err)
 		}

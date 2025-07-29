@@ -28,13 +28,21 @@ type Temporary struct {
 	Header    http.Header
 	Cookies   map[string]*http.Cookie
 	FloatPrec int // default = 2, if url.Values Contains the type of float, will FormatFloat(,,prec,)
+
+	// 错误处理：在链式调用中累积错误
+	err error
 }
 
 // NewTemporary new and init Temporary
 func NewTemporary(ses *Session, urlstr string) *Temporary {
 	tp := &Temporary{session: ses}
 
-	tp.SetRawURL(urlstr)
+	purl, err := url.ParseRequestURI(urlstr)
+	if err != nil {
+		tp.err = err
+		return tp
+	}
+	tp.ParsedURL = purl
 
 	tp.Header = make(http.Header)
 	tp.Cookies = make(map[string]*http.Cookie)
@@ -152,9 +160,14 @@ func (tp *Temporary) GetRawURL() string {
 
 // SetRawURL set url
 func (tp *Temporary) SetRawURL(srcURL string) *Temporary {
+	if tp.err != nil {
+		return tp // Pass through the error
+	}
+
 	purl, err := url.ParseRequestURI(srcURL)
 	if err != nil {
-		panic(err)
+		tp.err = err
+		return tp
 	}
 	tp.ParsedURL = purl
 	return tp
@@ -246,10 +259,15 @@ func (tp *Temporary) SetURLRawPath(path string) *Temporary {
 
 // SetBody url body 参数设置
 func (tp *Temporary) SetBody(body io.Reader) *Temporary {
+	if tp.err != nil {
+		return tp // Pass through the error
+	}
+
 	var buf = bytes.NewBuffer(nil)
 	_, err := io.Copy(buf, body)
 	if err != nil {
-		panic(err)
+		tp.err = err
+		return tp
 	}
 	tp.Body = buf
 
@@ -315,6 +333,10 @@ func (tp *Temporary) CreateBodyMultipart() *MultipartFormData {
 
 // SetBodyUrlencoded Body FormData传参数. 推荐url.Values结构
 func (tp *Temporary) SetBodyUrlencoded(params interface{}) *Temporary {
+	if tp.err != nil {
+		return tp // Pass through the error
+	}
+
 	tp.Header.Set(HeaderKeyContentType, TypeURLENCODED)
 	if params == nil {
 		tp.Body = nil
@@ -370,13 +392,18 @@ func (tp *Temporary) SetBodyUrlencoded(params interface{}) *Temporary {
 	case []rune: // 风险
 		tp.Body = bytes.NewBuffer([]byte(string(param)))
 	default:
-		log.Panic(errors.New("only support [url.Values,map[string][]string],map[string]string,string(a=x&b=c),[]byte,[]rune"))
+		tp.err = errors.New("only support [url.Values,map[string][]string,map[string]string,string,[]byte,[]rune]")
+		return tp
 	}
 	return tp
 }
 
 // SetBodyFormData Body FormData传参数
 func (tp *Temporary) SetBodyFormData(params ...interface{}) *Temporary {
+	if tp.err != nil {
+		return tp // Pass through the error
+	}
+
 	defaultContentType := TypeFormData
 	var mwriter *multipart.Writer
 	if len(params) == 1 {
@@ -384,14 +411,21 @@ func (tp *Temporary) SetBodyFormData(params ...interface{}) *Temporary {
 			tp.Body = w.Data()
 			err := w.writer.Close()
 			if err != nil {
-				panic(err)
+				tp.err = err
+				return tp
 			}
 			mwriter = w.writer
 		}
 	}
 
 	if mwriter == nil {
-		tp.Body, mwriter = createMultipartEx(params...)
+		body, writer, err := createMultipartExSafe(params...)
+		if err != nil {
+			tp.err = err
+			return tp
+		}
+		tp.Body = body
+		mwriter = writer
 	}
 
 	if mwriter != nil {
@@ -423,6 +457,10 @@ func (tp *Temporary) SetBodyWithType(T string, params interface{}) *Temporary {
 
 // SetBodyJson Body Json传参数. 支持string,[]byte,[]rune,map[string]interface{}, []string, []interface{}, map[string]string,结构体等
 func (tp *Temporary) SetBodyJson(params interface{}) *Temporary {
+	if tp.err != nil {
+		return tp // Pass through the error
+	}
+
 	tp.Header.Set(HeaderKeyContentType, TypeJSON)
 	if params == nil {
 		tp.Body = nil
@@ -438,7 +476,8 @@ func (tp *Temporary) SetBodyJson(params interface{}) *Temporary {
 	default: // map[string]interface{}, []string, []interface{}, map[string]string:
 		data, err := json.Marshal(v)
 		if err != nil {
-			log.Panic(err)
+			tp.err = err
+			return tp
 		}
 		tp.Body = bytes.NewBuffer(data)
 	}
@@ -448,6 +487,10 @@ func (tp *Temporary) SetBodyJson(params interface{}) *Temporary {
 
 // SetBodyPlain Body Plain传参数
 func (tp *Temporary) SetBodyPlain(params interface{}) *Temporary {
+	if tp.err != nil {
+		return tp // Pass through the error
+	}
+
 	tp.Header.Set(HeaderKeyContentType, TypePlain)
 	if params == nil {
 		tp.Body = nil
@@ -461,13 +504,18 @@ func (tp *Temporary) SetBodyPlain(params interface{}) *Temporary {
 	case []rune: // 风险
 		tp.Body = bytes.NewBuffer([]byte(string(param)))
 	default:
-		log.Panic(errors.New("only support [string(a=x&b=c),[]byte,[]rune"))
+		tp.err = errors.New("only support [string,[]byte,[]rune]")
+		return tp
 	}
 	return tp
 }
 
 // SetBodyStream Body Stream传参数
 func (tp *Temporary) SetBodyStream(params interface{}) *Temporary {
+	if tp.err != nil {
+		return tp // Pass through the error
+	}
+
 	tp.Header.Set(HeaderKeyContentType, TypeStream)
 	if params == nil {
 		tp.Body = nil
@@ -481,7 +529,8 @@ func (tp *Temporary) SetBodyStream(params interface{}) *Temporary {
 	case []rune: // 风险
 		tp.Body = bytes.NewBuffer([]byte(string(param)))
 	default:
-		log.Panic(errors.New("only support [string(a=x&b=c),[]byte,[]rune"))
+		tp.err = errors.New("only support [string,[]byte,[]rune]")
+		return tp
 	}
 	return tp
 }
@@ -509,9 +558,13 @@ func setTempCookieRequest(req *http.Request, wf *Temporary) {
 
 // Execute 执行. 请求后会清楚Body的内容. 需要重新
 func (tp *Temporary) Execute() (*Response, error) {
+	if tp.err != nil {
+		return nil, tp.err // Return the stored error
+	}
+
 	req, err := tp.BuildRequest()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	resp, err := tp.session.client.Do(req)

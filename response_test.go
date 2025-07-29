@@ -104,7 +104,7 @@ func TestCaseAcceptEncoding2(t *testing.T) {
 	ses := NewSession() //requests.NewSession()
 	ses.Config().AddAcceptEncoding(AcceptEncodingBr)
 	tp := ses.Get("http://0.0.0.0/compress")
-	tp.AddAcceptEncoding(AcceptEncodingDeflate)
+	tp.SetHeader("Accept-Encoding", "deflate")
 	resp, err := tp.TestExecute(TestServer)
 	if err != nil {
 		panic(err)
@@ -119,7 +119,7 @@ func TestContentCompressType(t *testing.T) {
 	ses := NewSession() //requests.NewSession()
 	ses.Config().SetContentEncoding(ContentEncodingBr)
 	tp := ses.Get("http://0.0.0.0/content-compress")
-	tp.SetBodyJson(H{"key": "hello compress"})
+	tp.SetBodyJSON(H{"key": "hello compress"})
 	resp, err := tp.TestExecute(TestServer)
 	if err != nil {
 		panic(err)
@@ -131,7 +131,7 @@ func TestContentCompressType(t *testing.T) {
 	ses = NewSession() //requests.NewSession()
 	ses.Config().SetContentEncoding(ContentEncodingDeflate)
 	tp = ses.Get("http://0.0.0.0/content-compress")
-	tp.SetBodyJson(H{"key": "hello compress"})
+	tp.SetBodyJSON(H{"key": "hello compress"})
 	resp, err = tp.TestExecute(TestServer)
 	if err != nil {
 		panic(err)
@@ -143,7 +143,7 @@ func TestContentCompressType(t *testing.T) {
 	ses = NewSession() //requests.NewSession()
 	ses.Config().SetContentEncoding(ContentEncodingGzip)
 	tp = ses.Get("http://0.0.0.0/content-compress")
-	tp.SetBodyJson(H{"key": "hello compress"})
+	tp.SetBodyJSON(H{"key": "hello compress"})
 	resp, err = tp.TestExecute(TestServer)
 	if err != nil {
 		panic(err)
@@ -154,7 +154,7 @@ func TestContentCompressType(t *testing.T) {
 
 	ses = NewSession() //requests.NewSession()
 	tp = ses.Get("http://0.0.0.0/content-compress")
-	tp.SetBodyJson(H{"key": "hello compress"})
+	tp.SetBodyJSON(H{"key": "hello compress"})
 	resp, err = tp.TestExecute(TestServer)
 	if err != nil {
 		panic(err)
@@ -167,7 +167,7 @@ func TestContentCompressType(t *testing.T) {
 func TestReadmeEg1_2(t *testing.T) {
 	ses := NewSession() //requests.NewSession()
 	tp := ses.Get("http://httpbin.org/anything")
-	tp.SetBodyJson(`{"a": 1, "b": 2}`)
+	tp.SetBodyJSON(`{"a": 1, "b": 2}`)
 	resp, _ := tp.Execute()
 	// log.Println(string(resp.Content()))
 	// {
@@ -192,12 +192,12 @@ func TestReadmeEg1_2(t *testing.T) {
 	//   }
 
 	tp = ses.Get("http://httpbin.org/anything")
-	tp.SetBodyJson(map[string]interface{}{"a": "1", "b": 2})
+	tp.SetBodyJSON(map[string]interface{}{"a": "1", "b": 2})
 	resp, _ = tp.Execute()
 	// log.Println(resp.ContentString())
 
 	tp = ses.Get("http://httpbin.org/anything")
-	tp.SetBodyJson(H{"a": "1", "b": 2})
+	tp.SetBodyJSON(H{"a": "1", "b": 2})
 	resp, _ = tp.Execute()
 	log.Println(resp.ContentString())
 
