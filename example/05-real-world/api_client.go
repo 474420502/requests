@@ -100,7 +100,7 @@ func (c *APIClient) GetUser(userID int) (*User, error) {
 	}
 
 	var user User
-	err = resp.UnmarshalJSON(&user)
+	err = resp.DecodeJSON(&user)
 	if err != nil {
 		return nil, fmt.Errorf("解析响应失败: %v", err)
 	}
@@ -125,7 +125,7 @@ func (c *APIClient) CreateUser(req CreateUserRequest) (*User, error) {
 	}
 
 	var user User
-	err = resp.UnmarshalJSON(&user)
+	err = resp.DecodeJSON(&user)
 	if err != nil {
 		return nil, fmt.Errorf("解析创建用户响应失败: %v", err)
 	}
@@ -150,7 +150,7 @@ func (c *APIClient) UpdateUser(userID int, updates map[string]interface{}) (*Use
 	}
 
 	var user User
-	err = resp.UnmarshalJSON(&user)
+	err = resp.DecodeJSON(&user)
 	if err != nil {
 		return nil, fmt.Errorf("解析更新用户响应失败: %v", err)
 	}
@@ -192,7 +192,7 @@ func (c *APIClient) ListUsers(page, limit int) ([]User, error) {
 	}
 
 	var apiResp APIResponse
-	err = resp.UnmarshalJSON(&apiResp)
+	err = resp.DecodeJSON(&apiResp)
 	if err != nil {
 		return nil, fmt.Errorf("解析用户列表响应失败: %v", err)
 	}

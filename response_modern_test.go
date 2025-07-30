@@ -45,8 +45,8 @@ func TestResponse_BindJSON(t *testing.T) {
 	}
 }
 
-// 测试UnmarshalJSON功能
-func TestResponse_UnmarshalJSON(t *testing.T) {
+// 测试DecodeJSON功能
+func TestResponse_DecodeJSON(t *testing.T) {
 	session := NewSession()
 
 	resp, err := session.Get("http://httpbin.org/json").Execute()
@@ -55,9 +55,9 @@ func TestResponse_UnmarshalJSON(t *testing.T) {
 	}
 
 	var data map[string]interface{}
-	err = resp.UnmarshalJSON(&data)
+	err = resp.DecodeJSON(&data)
 	if err != nil {
-		t.Fatalf("UnmarshalJSON failed: %v", err)
+		t.Fatalf("DecodeJSON failed: %v", err)
 	}
 
 	// httpbin.org/json 返回一个包含slideshow的JSON对象
@@ -285,16 +285,16 @@ func BenchmarkRequest_TypeSafeAPI(b *testing.B) {
 	}
 }
 
-// 基准测试：对比新旧API性能
-func BenchmarkRequest_OldAPI(b *testing.B) {
+// 基准测试：现代API性能
+func BenchmarkRequest_ModernAPI(b *testing.B) {
 	session := NewSession()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		tp := session.Get("http://httpbin.org/get")
-		tp.QueryParam("id").Set(i)
-		tp.QueryParam("active").Set(true)
-		_, err := tp.Execute()
+		req := session.Get("http://httpbin.org/get")
+		req.AddQueryInt("id", i)
+		req.AddQueryBool("active", true)
+		_, err := req.Execute()
 
 		if err != nil {
 			b.Fatalf("Request failed: %v", err)

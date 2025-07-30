@@ -7,27 +7,27 @@ import (
 	"github.com/474420502/requests"
 )
 
-// 测试第一阶段重构成果
-func testPhase1Refactoring() {
-	fmt.Println("=== 第一阶段重构成果验证 ===")
+// 测试v3.0现代化API
+func testModernAPI() {
+	fmt.Println("=== requests库 v3.0 现代化API演示 ===")
 
-	// 1. 验证Temporary兼容性 - 应该能正常工作但使用Request内核
-	fmt.Println("1. 测试Temporary兼容性（已重定向到Request）:")
+	// 1. 使用现代化的Request API
+	fmt.Println("1. 现代化Request API:")
 	ses := requests.NewSession()
-	tp := requests.NewTemporary(ses, "https://httpbin.org/get")
-	tp.AddHeader("X-Test", "temporary-compat")
+	req := ses.Get("https://httpbin.org/get")
+	req.AddHeader("X-Test", "modern-api")
 
-	if tp.Error() != nil {
-		fmt.Printf("✗ Temporary创建失败: %v\n", tp.Error())
+	if req.Error() != nil {
+		fmt.Printf("✗ Request创建失败: %v\n", req.Error())
 	} else {
-		fmt.Println("✓ Temporary向后兼容正常")
+		fmt.Println("✓ 现代化Request API正常")
 	}
 
-	// 2. 验证Session只返回Request对象
-	fmt.Println("2. 测试Session统一返回Request:")
-	req := ses.Get("https://httpbin.org/get").
+	// 2. 验证Session统一返回Request对象
+	fmt.Println("2. Session统一API:")
+	req = ses.Get("https://httpbin.org/get").
 		SetHeader("X-Test", "unified-request").
-		AddQuery("phase", "1")
+		AddQuery("phase", "3")
 
 	if req.Error() != nil {
 		fmt.Printf("✗ Request创建失败: %v\n", req.Error())
@@ -79,23 +79,23 @@ func testPhase1Refactoring() {
 		fmt.Println("✓ 弃用方法保持向后兼容")
 	}
 
-	// 6. 验证API统一性 - Temporary和Request应该产生相同结果
-	fmt.Println("6. 测试API统一性:")
+	// 6. 验证现代化API的一致性
+	fmt.Println("6. 现代化API一致性:")
 
-	// 使用Temporary（实际是Request）
-	tempReq := requests.NewTemporary(session, "https://httpbin.org/get")
-	tempReq.AddHeader("X-Source", "temporary")
+	// 使用Session方法
+	sessionReq := session.Get("https://httpbin.org/get")
+	sessionReq.AddHeader("X-Source", "session")
 
-	// 使用Request
-	directReq := session.Get("https://httpbin.org/get").
-		SetHeader("X-Source", "request")
+	// 使用顶层函数
+	directReq := requests.Get("https://httpbin.org/get").
+		SetHeader("X-Source", "direct")
 
 	// 两者都应该正常工作
-	if tempReq.Error() == nil && directReq.Error() == nil {
-		fmt.Println("✓ API统一性：Temporary和Request都正常工作")
+	if sessionReq.Error() == nil && directReq.Error() == nil {
+		fmt.Println("✓ API一致性：Session和顶层函数都正常工作")
 	} else {
 		fmt.Printf("✗ API统一性测试失败: temp=%v, direct=%v\n",
-			tempReq.Error(), directReq.Error())
+			sessionReq.Error(), directReq.Error())
 	}
 
 	fmt.Println("\n=== 第一阶段重构总结 ===")
@@ -109,5 +109,5 @@ func testPhase1Refactoring() {
 }
 
 func main() {
-	testPhase1Refactoring()
+	testModernAPI()
 }

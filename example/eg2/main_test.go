@@ -53,18 +53,18 @@ func TestCodeStructure(t *testing.T) {
 
 // TestPhase1Refactoring 测试第一阶段重构成果
 func TestPhase1Refactoring(t *testing.T) {
-	// 1. 验证Temporary兼容性 - 应该能正常工作但使用Request内核
+	// 1. 使用现代化的Request API
 	ses := requests.NewSession()
-	tp := requests.NewTemporary(ses, "http://example.com/test")
-	tp.AddHeader("X-Test", "temporary-compat")
+	req := ses.Get("http://example.com/test")
+	req.AddHeader("X-Test", "modern-request")
 
-	if tp.Error() != nil {
-		t.Errorf("Temporary兼容性失败: %v", tp.Error())
+	if req.Error() != nil {
+		t.Errorf("Request创建失败: %v", req.Error())
 	}
-	t.Log("✓ Temporary向后兼容正常")
+	t.Log("✓ 现代化Request API正常")
 
-	// 2. 验证Session只返回Request对象
-	req := ses.Get("http://example.com/test").
+	// 2. 验证Session统一返回Request对象
+	req = ses.Get("http://example.com/test").
 		SetHeader("X-Test", "unified-request").
 		AddQuery("phase", "1")
 
@@ -74,11 +74,11 @@ func TestPhase1Refactoring(t *testing.T) {
 	t.Log("✓ Session统一返回Request对象")
 
 	// 3. 验证顶层函数使用Request
-	req2 := requests.Get("http://example.com/test").
+	req3 := requests.Get("http://example.com/test").
 		SetHeader("X-Test", "top-level-request")
 
-	if req2.Error() != nil {
-		t.Errorf("顶层函数失败: %v", req2.Error())
+	if req3.Error() != nil {
+		t.Errorf("顶层函数失败: %v", req3.Error())
 	}
 	t.Log("✓ 顶层函数统一返回Request对象")
 
@@ -104,16 +104,16 @@ func TestPhase1Refactoring(t *testing.T) {
 		t.Log("✓ 弃用方法保持向后兼容")
 	}
 
-	// 6. 验证API统一性
-	tempReq := requests.NewTemporary(session, "http://example.com/test")
-	tempReq.AddHeader("X-Source", "temporary")
+	// 6. 验证API统一性 - 现在所有请求都使用统一的Request API
+	modernReq := session.Get("http://example.com/test")
+	modernReq.AddHeader("X-Source", "modern-request")
 
 	directReq := session.Get("http://example.com/test").
 		SetHeader("X-Source", "request")
 
-	if tempReq.Error() != nil || directReq.Error() != nil {
-		t.Errorf("API统一性测试失败: temp=%v, direct=%v",
-			tempReq.Error(), directReq.Error())
+	if modernReq.Error() != nil || directReq.Error() != nil {
+		t.Errorf("API统一性测试失败: modern=%v, direct=%v",
+			modernReq.Error(), directReq.Error())
 	} else {
 		t.Log("✓ API统一性：Temporary和Request都正常工作")
 	}

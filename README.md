@@ -1,4 +1,6 @@
-# Go Requests - HTTP Client Library
+# Go Requests v2.0 - Modern HTTP Client Library
+
+**🎉 NEW v2.0 Release!** This major update brings type-safe APIs, powerful middleware system, and enhanced developer experience. See [CHANGELOG.md](CHANGELOG.md) and [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) for details.
 
 A powerful and easy-to-use Go HTTP client library designed for web scraping, API calls, and HTTP request handling. Features modern design with method chaining, middleware support, and type-safe configuration.
 
@@ -53,6 +55,52 @@ func main() {
     fmt.Println("Status Code:", resp.GetStatusCode())
     fmt.Println("Response:", string(resp.Content()))
 }
+```
+
+### 🆕 Modern API Examples (v2.0)
+
+```go
+// Type-safe query parameters
+req := session.Get("https://api.example.com/search")
+req.AddQueryInt("page", 1)
+req.AddQueryBool("active", true)
+req.AddQueryString("category", "books")
+
+// Simple path parameters
+req.SetPathParam("userId", "123")  // replaces {userId} in URL
+req.SetPathParams(map[string]string{
+    "version": "v1",
+    "format": "json",
+})
+
+// Type-safe form data
+req.SetFormFieldsTyped(map[string]interface{}{
+    "name":     "John Doe",
+    "age":      30,
+    "active":   true,
+    "score":    95.5,
+})
+
+// Enhanced Session creation with middleware
+session, err := requests.NewSessionWithOptions(
+    requests.WithTimeout(30*time.Second),
+    requests.WithRetry(3, 2*time.Second),
+    requests.WithMiddleware(&requests.LoggingMiddleware{}),
+    requests.WithMiddleware(&requests.RetryMiddleware{MaxRetries: 3}),
+)
+```
+
+### Pre-configured Sessions
+
+```go
+// API client optimized session
+apiSession, _ := requests.NewSessionForAPI()
+
+// Web scraping optimized session  
+scrapingSession, _ := requests.NewSessionForScraping()
+
+// High performance session
+perfSession, _ := requests.NewHighPerformanceSession()
 ```
 
 ### Creating Session with Functional Options
@@ -603,6 +651,59 @@ tlsConfig := &tls.Config{
     // Add custom certificates, etc.
 }
 session.Config().SetTLSConfig(tlsConfig)
+```
+
+**Q: Proxy connection failed?**
+```go
+// Check proxy URL format
+err := session.Config().SetProxyString("http://proxy.example.com:8080")
+```
+
+## 🔄 Version 2.0 Migration
+
+### Deprecated APIs (Still Functional)
+
+While the following APIs still work in v2.0, they are deprecated and will be removed in v3.0:
+
+```go
+// ❌ Deprecated - Complex parameter system
+req.QueryParam("page").IntSet(1)
+req.PathParam("userId").StringSet("123")
+
+// ✅ Modern - Type-safe methods
+req.AddQueryInt("page", 1)
+req.SetPathParam("userId", "123")
+
+// ❌ Deprecated - Temporary API
+temp := requests.NewTemporary(session, "http://example.com")
+
+// ✅ Modern - Unified Request API
+req := session.Get("http://example.com")
+```
+
+### Migration Benefits
+
+- **Type Safety**: Catch errors at compile time
+- **Better Performance**: Reduced memory allocations
+- **Cleaner Code**: More intuitive and readable
+- **Rich Features**: Access to middleware, retry, metrics, etc.
+
+For complete migration instructions, see [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md).
+
+## 📚 Additional Resources
+
+- **[CHANGELOG.md](CHANGELOG.md)** - Detailed list of all changes
+- **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** - Step-by-step upgrade guide
+- **[Examples](example/)** - Comprehensive usage examples
+- **API Documentation** - Full Go doc coverage
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 ```
 
 **Q: Proxy connection failed?**

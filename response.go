@@ -131,14 +131,14 @@ func (gresp *Response) Json() gjson.Result {
 	return gjson.ParseBytes(gresp.readBytes)
 }
 
-// UnmarshalJSON 将响应体反序列化到给定的结构体中
-func (gresp *Response) UnmarshalJSON(v interface{}) error {
+// DecodeJSON 将响应体反序列化到给定的结构体中
+func (gresp *Response) DecodeJSON(v interface{}) error {
 	return json.Unmarshal(gresp.readBytes, v)
 }
 
-// BindJSON UnmarshalJSON的别名，更符合现代Go API命名习惯
+// BindJSON DecodeJSON的别名，更符合现代Go API命名习惯
 func (gresp *Response) BindJSON(v interface{}) error {
-	return gresp.UnmarshalJSON(v)
+	return gresp.DecodeJSON(v)
 }
 
 // IsJSON 检查响应是否为JSON类型

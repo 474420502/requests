@@ -464,26 +464,10 @@ func (r *Request) SetURLPath(path []string) *Request {
 	return r
 }
 
-// QueryParam 获取查询参数处理器
-// Deprecated: 使用类型安全的 AddQuery* 方法系列代替，如 AddQueryInt, AddQueryBool 等
-func (r *Request) QueryParam(key string) IParam {
-	// 直接传递Request引用，无需创建Temporary
-	return &ParamQuery{req: r, Key: key}
-}
-
-// PathParam 路径参数处理器
-// Deprecated: 使用 SetPathParam 和 SetPathParams 方法代替，它们更简单且类型安全
-func (r *Request) PathParam(regexpGroup string) IParam {
-	// 直接传递Request引用，无需创建Temporary
-	return extractorParam(r, regexpGroup, r.parsedURL.Path)
-}
-
-// HostParam 主机参数处理器
-// Deprecated: 复杂的正则参数处理已废弃，使用直接的URL操作方法
-func (r *Request) HostParam(regexpGroup string) IParam {
-	// 直接传递Request引用，无需创建Temporary
-	return extractorParam(r, regexpGroup, r.parsedURL.Host)
-}
+// 以下查询参数和路径参数方法已被移除。
+// 请使用现代化的类型安全方法：
+// - AddQueryInt, AddQueryBool, AddQueryFloat, AddQuery 等用于查询参数
+// - SetPathParam, SetPathParams 用于路径参数
 
 // WithMiddleware 添加中间件
 func (r *Request) WithMiddleware(middleware ...Middleware) *Request {

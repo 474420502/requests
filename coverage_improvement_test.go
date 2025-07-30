@@ -200,66 +200,60 @@ func TestSetProxyEdgeCases(t *testing.T) {
 	})
 }
 
-// TestTemporaryCompatibilityMethods 测试Temporary的兼容性方法
-func TestTemporaryCompatibilityMethods(t *testing.T) {
+// TestRequestCompatibilityMethods 测试Request的兼容性方法
+func TestRequestCompatibilityMethods(t *testing.T) {
 	session := NewSession()
 
-	t.Run("TemporaryBasicMethods", func(t *testing.T) {
-		temp := NewTemporary(session, "http://httpbin.org/get")
-		if temp == nil {
-			t.Fatal("Expected Temporary object to be created")
-		}
-
-		// 测试SetMethod
-		temp.SetMethod("POST")
-		if temp.Method != "POST" {
-			t.Errorf("Expected method to be POST, got %s", temp.Method)
+	t.Run("RequestBasicMethods", func(t *testing.T) {
+		req := session.Get("http://httpbin.org/get")
+		if req == nil {
+			t.Fatal("Expected Request object to be created")
 		}
 
 		// 测试Error方法
-		err := temp.Error()
+		err := req.Error()
 		// 在没有错误的情况下应该返回nil
-		if err != nil && temp.err == nil {
+		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
 	})
 
-	t.Run("TemporaryBodyMethods", func(t *testing.T) {
-		temp := NewTemporary(session, "http://httpbin.org/post")
+	t.Run("RequestBodyMethods", func(t *testing.T) {
+		req := session.Post("http://httpbin.org/post")
 
 		// 测试SetBodyUrlencoded
 		data := map[string]string{"key": "value"}
-		temp.SetBodyUrlencoded(data)
+		req.SetBodyUrlencoded(data)
 
 		// 测试SetBodyPlain
 		plainData := "plain text data"
-		temp.SetBodyPlain(plainData)
+		req.SetBodyPlain(plainData)
 
 		// 测试SetBodyStream
 		reader := strings.NewReader("stream data")
-		temp.SetBodyStream(reader)
+		req.SetBodyStream(reader)
 
 		// 这些方法应该不会导致panic
 	})
 
-	t.Run("TemporaryWithInvalidURL", func(t *testing.T) {
+	t.Run("RequestWithInvalidURL", func(t *testing.T) {
 		// 测试无效URL
-		temp := NewTemporary(session, "://invalid-url")
-		if temp.err == nil {
+		req := NewRequest(session, "GET", "://invalid-url")
+		if req.Error() == nil {
 			t.Error("Expected error for invalid URL")
 		}
 	})
 
-	t.Run("TemporaryExecuteMethods", func(t *testing.T) {
-		temp := NewTemporary(session, "http://httpbin.org/get")
+	t.Run("RequestExecuteMethods", func(t *testing.T) {
+		req := session.Get("http://httpbin.org/get")
 
 		// 测试BuildRequest (不执行实际请求)
-		httpReq, err := temp.BuildRequest()
+		httpReq, err := req.buildHTTPRequest()
 		if err != nil {
-			t.Errorf("BuildRequest returned error: %v", err)
+			t.Errorf("buildHTTPRequest returned error: %v", err)
 		}
 		if httpReq == nil {
-			t.Error("Expected BuildRequest to return non-nil request")
+			t.Error("Expected buildHTTPRequest to return non-nil request")
 		}
 
 		// 测试TestExecute - 需要一个测试服务器接口
@@ -513,17 +507,17 @@ func TestTLSConfigurationExtended(t *testing.T) {
 
 // TestErrorHandlingExtended 测试扩展错误处理
 func TestErrorHandlingExtended(t *testing.T) {
-	t.Run("TemporaryWithError", func(t *testing.T) {
+	t.Run("RequestWithError", func(t *testing.T) {
 		session := NewSession()
 
-		// 创建带有错误的Temporary对象
-		temp := NewTemporary(session, "://malformed-url")
-		if temp.err == nil {
+		// 创建带有错误的Request对象
+		req := NewRequest(session, "GET", "://malformed-url")
+		if req.Error() == nil {
 			t.Error("Expected error for malformed URL")
 		}
 
 		// 测试Error方法返回错误
-		err := temp.Error()
+		err := req.Error()
 		if err == nil {
 			t.Error("Expected Error() to return non-nil error")
 		}
