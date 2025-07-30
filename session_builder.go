@@ -3,6 +3,7 @@ package requests
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/cookiejar"
@@ -50,9 +51,29 @@ func WithProxy(proxyURL string) SessionOption {
 			s.transport = &http.Transport{}
 		}
 
+		// 检查空字符串
+		if proxyURL == "" {
+			return fmt.Errorf("proxy URL cannot be empty")
+		}
+
 		parsedURL, err := url.Parse(proxyURL)
 		if err != nil {
 			return err
+		}
+
+		// 验证代理URL的scheme必须是支持的协议
+		switch parsedURL.Scheme {
+		case "http", "https", "socks5":
+			// 支持的协议
+		case "":
+			return fmt.Errorf("proxy URL must have a valid scheme (http, https, or socks5)")
+		default:
+			return fmt.Errorf("unsupported proxy scheme: %s (supported: http, https, socks5)", parsedURL.Scheme)
+		}
+
+		// 验证必须有host
+		if parsedURL.Host == "" {
+			return fmt.Errorf("proxy URL must have a host")
 		}
 
 		s.transport.Proxy = http.ProxyURL(parsedURL)
