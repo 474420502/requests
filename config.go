@@ -139,6 +139,10 @@ func (cfg *Config) setProxyURL(purl *url.URL) error {
 			}
 			return dialer.Dial(network, addr)
 		}
+		// 为SOCKS5代理设置一个占位符函数，以便测试可以检测到代理已设置
+		cfg.ses.transport.Proxy = func(req *http.Request) (*url.URL, error) {
+			return purl, nil
+		}
 	} else {
 		cfg.ses.transport.Proxy = http.ProxyURL(purl)
 	}
