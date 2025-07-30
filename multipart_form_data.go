@@ -7,7 +7,24 @@ import (
 )
 
 // MultipartFormData 用于构建multipart表单数据
-// Deprecated: 推荐使用 SetFormFields() 和 AddFormFile() 方法
+//
+// Deprecated: 此结构体及其方法将在 v3.0.0 中移除。
+// 推荐使用以下现代API：
+//   - request.SetFormFields(map[string]string) - 设置表单字段
+//   - request.AddFormFile(fieldName, fileName, content) - 添加文件
+//   - request.SetFormFileFromPath(fieldName, filePath) - 从路径添加文件
+//
+// 迁移示例:
+//
+//	旧代码:
+//	  mpfd := &MultipartFormData{}
+//	  mpfd.AddField("name", "value")
+//	  mpfd.AddFile("file", "test.txt", []byte("content"))
+//	  request.SetBody(mpfd.Data())
+//
+//	新代码:
+//	  request.SetFormFields(map[string]string{"name": "value"})
+//	  request.AddFormFile("file", "test.txt", []byte("content"))
 type MultipartFormData struct {
 	data   bytes.Buffer
 	writer *multipart.Writer

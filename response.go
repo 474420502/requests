@@ -198,7 +198,16 @@ func (gresp *Response) GetJSONBool(path string) (bool, error) {
 }
 
 // MustBindJSON 绑定JSON，如果失败则panic（用于必须成功的场景）
-// Deprecated: 推荐使用 BindJSON 方法并适当处理错误
+//
+// Deprecated: 此方法将在 v3.0.0 中移除。推荐使用 BindJSON 方法并适当处理错误。
+// panic模式违反了Go的错误处理最佳实践。
+//
+// 迁移示例:
+//
+//	旧: response.MustBindJSON(&data)
+//	新: if err := response.BindJSON(&data); err != nil {
+//	      return fmt.Errorf("failed to bind JSON: %w", err)
+//	    }
 func (gresp *Response) MustBindJSON(v interface{}) {
 	if err := gresp.BindJSON(v); err != nil {
 		panic(fmt.Sprintf("MustBindJSON failed: %v", err))

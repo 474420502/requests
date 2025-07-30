@@ -55,7 +55,19 @@ func (cfg *Config) ClearBasicAuth() {
 }
 
 // SetBasicAuthLegacy 支持多种参数形式的遗留方法
-// Deprecated: 使用 SetBasicAuth(user, password string) 或 SetBasicAuthStruct(*BasicAuth) 代替
+//
+// Deprecated: 此方法将在 v3.0.0 中移除。请使用以下替代方案：
+//   - SetBasicAuth(user, password string) error - 用于字符串参数
+//   - SetBasicAuthStruct(*BasicAuth) - 用于结构体参数
+//   - ClearBasicAuth() - 用于清除认证
+//
+// 迁移示例:
+//
+//	旧: cfg.SetBasicAuthLegacy("user", "pass")
+//	新: cfg.SetBasicAuth("user", "pass")
+//
+//	旧: cfg.SetBasicAuthLegacy(&BasicAuth{User: "user", Password: "pass"})
+//	新: cfg.SetBasicAuthStruct(&BasicAuth{User: "user", Password: "pass"})
 func (cfg *Config) SetBasicAuthLegacy(args ...interface{}) error {
 	if len(args) == 1 {
 		switch v := args[0].(type) {
@@ -96,7 +108,16 @@ func (cfg *Config) SetInsecure(is bool) {
 }
 
 // SetProxy 设置代理（支持多种类型以保持向后兼容）
-// Deprecated: 使用 SetProxyString(proxyURL string) 代替以获得更好的类型安全性
+//
+// Deprecated: 此方法将在 v3.0.0 中移除。请使用 SetProxyString(proxyURL string) 代替以获得更好的类型安全性。
+//
+// 迁移示例:
+//
+//	旧: cfg.SetProxy("http://proxy:8080")
+//	新: cfg.SetProxyString("http://proxy:8080")
+//
+//	旧: cfg.SetProxy(nil)
+//	新: cfg.ClearProxy()
 func (cfg *Config) SetProxy(proxy interface{}) error {
 	switch v := proxy.(type) {
 	case string:
@@ -186,7 +207,18 @@ func (cfg *Config) SetContentEncoding(ct ContentEncodingType) {
 }
 
 // SetTimeout 设置超时时间（支持多种类型以保持向后兼容）
-// Deprecated: 使用 SetTimeoutDuration(time.Duration) 或 SetTimeoutSeconds(int) 代替以获得更好的类型安全性
+//
+// Deprecated: 此方法将在 v3.0.0 中移除。请使用以下类型安全的替代方案：
+//   - SetTimeoutDuration(time.Duration) - 推荐使用，最精确
+//   - SetTimeoutSeconds(int) - 用于简单的秒数设置
+//
+// 迁移示例:
+//
+//	旧: cfg.SetTimeout(30)
+//	新: cfg.SetTimeoutSeconds(30) 或 cfg.SetTimeoutDuration(30*time.Second)
+//
+//	旧: cfg.SetTimeout(time.Second * 30)
+//	新: cfg.SetTimeoutDuration(30*time.Second)
 func (cfg *Config) SetTimeout(t interface{}) error {
 	switch v := t.(type) {
 	case time.Duration:
