@@ -299,9 +299,22 @@ func TestSession_SetConfig(t *testing.T) {
 
 			switch tt.args.typeConfig {
 			case CRequestTimeout:
-				ses.Config().SetTimeout(tt.args.values)
+				// 将interface{}转换为time.Duration
+				switch v := tt.args.values.(type) {
+				case float64:
+					ses.Config().SetTimeout(time.Duration(v * float64(time.Second)))
+				case int:
+					ses.Config().SetTimeout(time.Duration(v) * time.Second)
+				case int64:
+					ses.Config().SetTimeout(time.Duration(v) * time.Second)
+				case time.Duration:
+					ses.Config().SetTimeout(v)
+				}
 			case CProxy:
-				ses.Config().SetProxy(tt.args.values)
+				// 将interface{}转换为string
+				if str, ok := tt.args.values.(string); ok {
+					ses.Config().SetProxy(str)
+				}
 			}
 
 			_, err := ses.Get("http://httpbin.org/get").Execute()
@@ -390,7 +403,7 @@ func TestSession_ConfigEx(t *testing.T) {
 		}
 	}
 
-	ses.Config().SetTimeout(float32(0.0000001))
+	ses.Config().SetTimeout(time.Duration(float32(0.0000001) * float32(time.Second)))
 
 	resp, err = ses.Get("http://httpbin.org/get").Execute()
 	if err == nil {
@@ -402,7 +415,7 @@ func TestSession_ConfigEx(t *testing.T) {
 	}
 
 	ses.Config().SetKeepAlives(true)
-	ses.Config().SetTimeout(int64(5))
+	ses.Config().SetTimeout(time.Duration(int64(5)) * time.Second)
 	// jar, _ := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	u, err := url.Parse("http://httpbin.org")
 	if err != nil {
@@ -429,11 +442,11 @@ func TestSession_ConfigEx(t *testing.T) {
 		}
 	}
 
-	ses.Config().SetProxy(nil)
+	ses.Config().SetProxy("") // 使用空字符串代替nil来清除代理
 	if u, err := url.Parse("http://" + ProxyAddress); err != nil {
 		t.Error(err)
 	} else {
-		ses.Config().SetProxy(u)
+		ses.Config().SetProxy(u.String()) // 转换为字符串
 	}
 
 	resp, err = ses.Get("http://httpbin.org/get").Execute()

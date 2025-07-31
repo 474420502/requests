@@ -100,7 +100,7 @@ func TestUploadFile(t *testing.T) {
 		ufile.SetFieldName("testfield")
 		ufile.SetFile(strings.NewReader("test content"))
 
-		resp, err := req.SetBodyFormData(*ufile).TestExecute(server)
+		resp, err := req.AddFormFile(ufile.FieldName, ufile.FileName, ufile.FileReader).TestExecute(server)
 		if err != nil {
 			t.Fatalf("TestExecute failed: %v", err)
 		}
@@ -128,8 +128,11 @@ func TestUploadFile(t *testing.T) {
 		ufile2.SetFieldName("file2")
 		ufile2.SetFile(strings.NewReader("second file content"))
 
-		// 传递多个参数而不是切片
-		resp, err := req.SetBodyFormData(ufile1, ufile2).TestExecute(server)
+		// 传递多个文件
+		resp, err := req.
+			AddFormFile(ufile1.FieldName, ufile1.FileName, ufile1.FileReader).
+			AddFormFile(ufile2.FieldName, ufile2.FileName, ufile2.FileReader).
+			TestExecute(server)
 		if err != nil {
 			t.Fatalf("TestExecute failed: %v", err)
 		}
@@ -152,26 +155,15 @@ func TestBoundary(t *testing.T) {
 		ses := NewSession()
 		req := ses.Post("/boundary-test")
 
-		// 使用CreateBodyMultipart创建multipart数据
-		mw := req.CreateBodyMultipart()
-		err := mw.AddField("key1", "value1")
-		if err != nil {
-			t.Fatalf("AddField failed: %v", err)
-		}
-
-		err = mw.AddField("key2", "value2")
-		if err != nil {
-			t.Fatalf("AddField failed: %v", err)
-		}
-
-		// 添加文件
+		// 使用现代API创建multipart数据
 		file := strings.NewReader("test file content")
-		err = mw.AddFieldFile("testfile", "test.txt", file)
-		if err != nil {
-			t.Fatalf("AddFieldFile failed: %v", err)
-		}
-
-		resp, err := req.SetBodyFormData(mw).TestExecute(server)
+		resp, err := req.
+			SetFormFields(map[string]string{
+				"key1": "value1",
+				"key2": "value2",
+			}).
+			AddFormFile("testfile", "test.txt", file).
+			TestExecute(server)
 		if err != nil {
 			t.Fatalf("TestExecute failed: %v", err)
 		}
@@ -211,7 +203,7 @@ func TestUploadFileFromPath(t *testing.T) {
 			t.Errorf("Expected FileName 'tests/json.file', got: %s", ufile.FileName)
 		}
 
-		resp, err := req.SetBodyFormData(ufile).TestExecute(server)
+		resp, err := req.AddFormFile(ufile.FieldName, ufile.FileName, ufile.FileReader).TestExecute(server)
 		if err != nil {
 			t.Fatalf("TestExecute failed: %v", err)
 		}
@@ -236,7 +228,7 @@ func TestUploadFileFromPath(t *testing.T) {
 		ufile.SetFieldName("customfile")
 		ufile.SetFileName("custom.json")
 
-		resp, err := req.SetBodyFormData(ufile).TestExecute(server)
+		resp, err := req.AddFormFile(ufile.FieldName, ufile.FileName, ufile.FileReader).TestExecute(server)
 		if err != nil {
 			t.Fatalf("TestExecute failed: %v", err)
 		}
@@ -282,7 +274,7 @@ func TestUploadFileFromGlob(t *testing.T) {
 		ses := NewSession()
 		req := ses.Post("/upload-glob")
 
-		resp, err := req.SetBodyFormData(file).TestExecute(server)
+		resp, err := req.AddFormFile(file.FieldName, file.FileName, file.FileReader).TestExecute(server)
 		if err != nil {
 			t.Fatalf("TestExecute failed: %v", err)
 		}
@@ -320,11 +312,14 @@ func TestUploadFileFromGlob(t *testing.T) {
 			defer file.fileCloser.Close()
 		}
 
-		// 测试上传 - 传递多个参数而不是切片
+		// 测试上传 - 传递多个文件
 		ses := NewSession()
 		req := ses.Post("/upload-multi-glob")
 
-		resp, err := req.SetBodyFormData(files[0], files[1]).TestExecute(server)
+		resp, err := req.
+			AddFormFile(files[0].FieldName, files[0].FileName, files[0].FileReader).
+			AddFormFile(files[1].FieldName, files[1].FileName, files[1].FileReader).
+			TestExecute(server)
 		if err != nil {
 			t.Fatalf("TestExecute failed: %v", err)
 		}

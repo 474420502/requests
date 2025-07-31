@@ -51,7 +51,7 @@ func main() {
 	// 测试表单数据
 	fmt.Println("\n=== 测试表单数据 ===")
 	req4 := session.Post("http://httpbin.org/post")
-	req4.SetBodyFormData(map[string]string{
+	req4.SetFormFields(map[string]string{
 		"field1": "value1",
 		"field2": "value2",
 	})

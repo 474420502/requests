@@ -90,67 +90,6 @@ func TestConfigLowCoverageMethods(t *testing.T) {
 	})
 }
 
-// TestSetBasicAuthLegacyEdgeCases 测试传统BasicAuth方法的边界情况
-func TestSetBasicAuthLegacyEdgeCases(t *testing.T) {
-	session := NewSession()
-	config := session.Config()
-
-	t.Run("SetBasicAuthLegacyWithComplexCredentials", func(t *testing.T) {
-		// 测试包含特殊字符的用户名和密码
-		username := "user@domain.com"
-		password := "pass:word!@#$%"
-
-		err := config.SetBasicAuthLegacy(username, password)
-		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
-		}
-
-		// 验证认证是否正确设置
-		if session.auth == nil {
-			t.Error("Expected auth to be set")
-		} else {
-			if session.auth.User != username {
-				t.Errorf("Expected username %s, got %s", username, session.auth.User)
-			}
-			if session.auth.Password != password {
-				t.Errorf("Expected password %s, got %s", password, session.auth.Password)
-			}
-		}
-	})
-
-	t.Run("SetBasicAuthLegacyWithEmptyCredentials", func(t *testing.T) {
-		// 测试空凭证
-		err := config.SetBasicAuthLegacy("", "")
-		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
-		}
-
-		// 即使是空凭证也应该被设置
-		if session.auth == nil {
-			t.Error("Expected auth to be set even with empty credentials")
-		}
-	})
-
-	t.Run("SetBasicAuthLegacyWithUnicodeCredentials", func(t *testing.T) {
-		// 测试Unicode字符
-		username := "用户名"
-		password := "密码123"
-
-		err := config.SetBasicAuthLegacy(username, password)
-		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
-		}
-
-		if session.auth == nil {
-			t.Error("Expected auth to be set")
-		} else {
-			if session.auth.User != username {
-				t.Errorf("Expected username %s, got %s", username, session.auth.User)
-			}
-		}
-	})
-}
-
 // TestSetProxyEdgeCases 测试代理设置的边界情况
 func TestSetProxyEdgeCases(t *testing.T) {
 	session := NewSession()
@@ -340,8 +279,8 @@ func TestRequestBuilderExtendedMethods(t *testing.T) {
 		// 测试SetBodyWithType方法
 		req.SetBodyWithType("test data", "text/plain")
 
-		// 测试CreateBodyMultipart方法
-		req.CreateBodyMultipart()
+		// 测试表单设置方法
+		req.SetFormFields(map[string]string{"test": "value"})
 
 		// 这些方法应该不会导致panic
 	})

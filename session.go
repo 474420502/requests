@@ -141,7 +141,35 @@ const (
 	CIsDecompressNoAccept
 )
 
-// NewSession 创建Session（向后兼容）
+// NewSession 创建一个新的HTTP会话实例。
+//
+// 该函数创建一个配置了默认设置的Session对象，适用于大多数HTTP请求场景。
+// 默认配置包括：
+//   - 禁用压缩处理（可通过SetCompression手动启用）
+//   - 禁用keep-alive连接（可通过SetKeepAlives手动启用）
+//   - 启用Cookie jar，自动处理Cookie
+//   - 使用系统默认的TLS配置
+//
+// 返回值:
+//
+//	*Session - 新创建的Session实例
+//
+// 示例:
+//
+//	// 基本用法
+//	session := NewSession()
+//	resp, err := session.Get("https://api.example.com/users").Execute()
+//
+//	// 链式调用
+//	content, err := NewSession().
+//	  Get("https://httpbin.org/json").
+//	  Execute().
+//	  Content()
+//
+// 注意:
+//   - 如果无法创建Cookie jar（极少见情况），Session仍可正常工作，只是不支持Cookie
+//   - 建议在应用中复用Session实例以获得更好的性能
+//   - 对于更复杂的配置需求，推荐使用 NewSessionBuilder()
 func NewSession() *Session {
 	client := &http.Client{}
 	transport := &http.Transport{DisableCompression: true, DisableKeepAlives: true}
@@ -279,26 +307,165 @@ func (ses *Session) GetMiddlewares() []Middleware {
 }
 
 // Head 请求 - 统一返回 Request 对象
+// Head 创建一个HTTP HEAD请求。
+//
+// HEAD请求获取资源的响应头信息，但不返回响应体内容。
+// 常用于检查资源是否存在、获取文件大小、检查最后修改时间等。
+//
+// 参数:
+//
+//	url - 请求的目标URL
+//
+// 返回值:
+//
+//	*Request - 可进一步配置和执行的请求对象
+//
+// 示例:
+//
+//	// 检查文件是否存在
+//	resp, err := session.Head("https://example.com/file.pdf").Execute()
+//	if err == nil && resp.GetStatusCode() == 200 {
+//	  fmt.Println("文件存在")
+//	}
+//
+//	// 获取Content-Length头部
+//	resp, _ := session.Head("https://example.com/download").Execute()
+//	size := resp.GetHeader("Content-Length")
 func (ses *Session) Head(url string) *Request {
 	return NewRequest(ses, "HEAD", url)
 }
 
-// Get 请求 - 统一返回 Request 对象
+// Get 创建一个HTTP GET请求。
+//
+// GET是最常用的HTTP方法，用于从服务器获取资源。
+// GET请求应该是安全的（不改变服务器状态）和幂等的（多次请求结果相同）。
+//
+// 参数:
+//
+//	url - 请求的目标URL
+//
+// 返回值:
+//
+//	*Request - 可进一步配置和执行的请求对象
+//
+// 示例:
+//
+//	// 简单GET请求
+//	resp, err := session.Get("https://api.example.com/users").Execute()
+//
+//	// 带查询参数的GET请求
+//	resp, err := session.Get("https://api.example.com/search").
+//	  SetQuery(url.Values{"q": {"golang"}, "limit": {"10"}}).
+//	  Execute()
+//
+//	// 获取JSON响应
+//	var result map[string]interface{}
+//	err := session.Get("https://api.example.com/data").
+//	  Execute().
+//	  JSON(&result)
 func (ses *Session) Get(url string) *Request {
 	return NewRequest(ses, "GET", url)
 }
 
-// Post 请求 - 统一返回 Request 对象
+// Post 创建一个HTTP POST请求。
+//
+// POST方法用于向服务器提交数据，常用于创建资源、提交表单、上传文件等。
+// POST请求不是幂等的，多次执行可能产生不同的结果。
+//
+// 参数:
+//
+//	url - 请求的目标URL
+//
+// 返回值:
+//
+//	*Request - 可进一步配置和执行的请求对象
+//
+// 示例:
+//
+//	// 提交JSON数据
+//	data := map[string]interface{}{"name": "John", "age": 30}
+//	resp, err := session.Post("https://api.example.com/users").
+//	  SetJSON(data).
+//	  Execute()
+//
+//	// 提交表单数据
+//	form := url.Values{"username": {"john"}, "password": {"secret"}}
+//	resp, err := session.Post("https://api.example.com/login").
+//	  SetForm(form).
+//	  Execute()
+//
+//	// 上传文件
+//	resp, err := session.Post("https://api.example.com/upload").
+//	  SetFile("file", "document.pdf").
+//	  Execute()
 func (ses *Session) Post(url string) *Request {
 	return NewRequest(ses, "POST", url)
 }
 
-// Put 请求 - 统一返回 Request 对象
+// Put 创建一个HTTP PUT请求。
+//
+// PUT方法用于更新或创建指定资源的完整表示。
+// PUT请求是幂等的，多次执行相同的PUT请求应该产生相同的结果。
+//
+// 参数:
+//
+//	url - 请求的目标URL
+//
+// 返回值:
+//
+//	*Request - 可进一步配置和执行的请求对象
+//
+// 示例:
+//
+//	// 更新用户信息
+//	user := map[string]interface{}{
+//	  "id": 123,
+//	  "name": "John Doe",
+//	  "email": "john@example.com",
+//	}
+//	resp, err := session.Put("https://api.example.com/users/123").
+//	  SetJSON(user).
+//	  Execute()
+//
+//	// 替换整个资源
+//	resp, err := session.Put("https://api.example.com/documents/456").
+//	  SetContentType("text/plain").
+//	  SetBody("新的文档内容").
+//	  Execute()
 func (ses *Session) Put(url string) *Request {
 	return NewRequest(ses, "PUT", url)
 }
 
-// Patch 请求 - 统一返回 Request 对象
+// Patch 创建一个HTTP PATCH请求。
+//
+// PATCH方法用于对资源进行部分更新，只修改指定的字段。
+// 与PUT不同，PATCH不需要提供资源的完整表示。
+//
+// 参数:
+//
+//	url - 请求的目标URL
+//
+// 返回值:
+//
+//	*Request - 可进一步配置和执行的请求对象
+//
+// 示例:
+//
+//	// 部分更新用户信息
+//	updates := map[string]interface{}{"email": "newemail@example.com"}
+//	resp, err := session.Patch("https://api.example.com/users/123").
+//	  SetJSON(updates).
+//	  Execute()
+//
+//	// JSON Patch格式
+//	patches := []map[string]interface{}{
+//	  {"op": "replace", "path": "/email", "value": "new@example.com"},
+//	  {"op": "add", "path": "/phone", "value": "123-456-7890"},
+//	}
+//	resp, err := session.Patch("https://api.example.com/users/123").
+//	  SetContentType("application/json-patch+json").
+//	  SetJSON(patches).
+//	  Execute()
 func (ses *Session) Patch(url string) *Request {
 	return NewRequest(ses, "PATCH", url)
 }

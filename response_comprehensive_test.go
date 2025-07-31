@@ -247,28 +247,6 @@ func TestResponseDecodingMethods(t *testing.T) {
 			t.Errorf("Expected count 5, got %d", result.Count)
 		}
 	})
-
-	t.Run("MustBindJSON_PanicOnError", func(t *testing.T) {
-		invalidJSON := `{"invalid": json,}`
-		resp := &Response{
-			readBytes: []byte(invalidJSON),
-			readResponse: &http.Response{
-				Header: http.Header{
-					"Content-Type": []string{"application/json"},
-				},
-			},
-		}
-
-		var result map[string]interface{}
-
-		defer func() {
-			if r := recover(); r == nil {
-				t.Error("Expected MustBindJSON to panic on invalid JSON")
-			}
-		}()
-
-		resp.MustBindJSON(&result)
-	})
 }
 
 // TestResponseContentHandling 测试内容处理方法

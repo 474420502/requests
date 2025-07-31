@@ -96,12 +96,12 @@ func TestPhase1Refactoring(t *testing.T) {
 		t.Log("✓ 类型安全配置方法正常工作")
 	}
 
-	// 5. 验证弃用方法仍能工作
-	err = session.Config().SetBasicAuthLegacy("testuser", "testpass")
+	// 5. 验证现代方法正常工作
+	err = session.Config().SetBasicAuth("testuser", "testpass")
 	if err != nil {
-		t.Errorf("兼容性方法失败: %v", err)
+		t.Errorf("现代方法失败: %v", err)
 	} else {
-		t.Log("✓ 弃用方法保持向后兼容")
+		t.Log("✓ 现代方法正常工作")
 	}
 
 	// 6. 验证API统一性 - 现在所有请求都使用统一的Request API

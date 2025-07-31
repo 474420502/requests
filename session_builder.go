@@ -19,10 +19,34 @@ type RetryConfig struct {
 	Backoff    time.Duration
 }
 
-// SessionOption 定义Session配置选项
+// SessionOption 定义Session配置选项的函数类型。
+// 每个配置选项都是一个函数，接收一个Session指针并返回error。
+// 这种模式允许在创建Session时进行灵活的配置组合。
+//
+// 示例:
+//
+//	session := NewSessionBuilder().
+//	  WithTimeout(30*time.Second).
+//	  WithUserAgent("MyApp/1.0").
+//	  Build()
 type SessionOption func(*Session) error
 
-// WithTimeout 设置默认超时时间
+// WithTimeout 设置HTTP客户端的默认超时时间。
+//
+// 该超时时间应用于整个请求-响应周期，包括连接建立、
+// 请求发送、响应接收的全过程。
+//
+// 参数:
+//
+//	timeout - 超时时间，如果设置为0则表示无超时限制
+//
+// 示例:
+//
+//	session := NewSessionBuilder().
+//	  WithTimeout(30*time.Second).  // 30秒超时
+//	  Build()
+//
+// 注意: 这个超时时间会覆盖任何之前设置的超时时间。
 func WithTimeout(timeout time.Duration) SessionOption {
 	return func(s *Session) error {
 		if s.client == nil {
@@ -33,7 +57,26 @@ func WithTimeout(timeout time.Duration) SessionOption {
 	}
 }
 
-// WithTLSConfig 设置TLS配置
+// WithTLSConfig 设置TLS/SSL连接的自定义配置。
+//
+// 通过此函数可以配置客户端证书、根证书、加密套件等TLS相关设置。
+// 常用于需要客户端证书认证或自定义根证书的场景。
+//
+// 参数:
+//
+//	config - TLS配置对象，包含证书、密钥、根证书等信息
+//
+// 示例:
+//
+//	tlsConfig := &tls.Config{
+//	  InsecureSkipVerify: false,
+//	  ClientAuth: tls.RequireAndVerifyClientCert,
+//	}
+//	session := NewSessionBuilder().
+//	  WithTLSConfig(tlsConfig).
+//	  Build()
+//
+// 安全提示: 避免在生产环境中使用 InsecureSkipVerify: true
 func WithTLSConfig(config *tls.Config) SessionOption {
 	return func(s *Session) error {
 		if s.transport == nil {
@@ -44,7 +87,26 @@ func WithTLSConfig(config *tls.Config) SessionOption {
 	}
 }
 
-// WithProxy 设置代理
+// WithProxy 设置HTTP代理服务器。
+//
+// 支持HTTP、HTTPS和SOCKS5代理协议。代理URL应包含完整的协议和地址信息。
+//
+// 参数:
+//
+//	proxyURL - 代理服务器地址，格式为 "protocol://host:port"
+//
+// 支持的代理协议:
+//   - HTTP:  "http://proxy.example.com:8080"
+//   - HTTPS: "https://proxy.example.com:8080"
+//   - SOCKS5: "socks5://proxy.example.com:1080"
+//
+// 示例:
+//
+//	session := NewSessionBuilder().
+//	  WithProxy("http://proxy.company.com:8080").
+//	  Build()
+//
+// 错误处理: 如果代理URL格式无效，将返回错误
 func WithProxy(proxyURL string) SessionOption {
 	return func(s *Session) error {
 		if s.transport == nil {
@@ -81,7 +143,25 @@ func WithProxy(proxyURL string) SessionOption {
 	}
 }
 
-// WithBasicAuth 设置基本认证
+// WithBasicAuth 设置HTTP基本认证（Basic Authentication）。
+//
+// 基本认证会在每个请求的Authorization头中发送用户名和密码，
+// 密码会被Base64编码（注意：不是加密，只是编码）。
+//
+// 参数:
+//
+//	username - 用户名
+//	password - 密码
+//
+// 示例:
+//
+//	session := NewSessionBuilder().
+//	  WithBasicAuth("admin", "secret123").
+//	  Build()
+//
+// 安全提示:
+//   - 基本认证不提供加密，建议仅在HTTPS连接中使用
+//   - 避免在日志中记录包含认证信息的请求
 func WithBasicAuth(username, password string) SessionOption {
 	return func(s *Session) error {
 		s.auth = &BasicAuth{
@@ -92,7 +172,29 @@ func WithBasicAuth(username, password string) SessionOption {
 	}
 }
 
-// WithHeaders 设置默认请求头
+// WithHeaders 设置默认的HTTP请求头。
+//
+// 这些头部会应用到所有通过该Session发送的请求中。
+// 如果单个请求设置了相同名称的头部，则请求级别的设置会覆盖默认设置。
+//
+// 参数:
+//
+//	headers - 包含头部名称和值的映射表
+//
+// 示例:
+//
+//	headers := map[string]string{
+//	  "User-Agent": "MyApp/1.0",
+//	  "Accept": "application/json",
+//	  "X-API-Key": "your-api-key",
+//	}
+//	session := NewSessionBuilder().
+//	  WithHeaders(headers).
+//	  Build()
+//
+// 注意:
+//   - 头部名称不区分大小写，但建议使用标准格式
+//   - 多次调用会合并头部，相同名称的会被覆盖
 func WithHeaders(headers map[string]string) SessionOption {
 	return func(s *Session) error {
 		if s.Header == nil {
@@ -105,7 +207,30 @@ func WithHeaders(headers map[string]string) SessionOption {
 	}
 }
 
-// WithUserAgent 设置User-Agent
+// WithUserAgent 设置HTTP请求的User-Agent头部。
+//
+// User-Agent头部用于标识客户端应用程序、版本、操作系统等信息。
+// 许多网站和API会根据User-Agent来返回不同的内容或实施不同的策略。
+//
+// 参数:
+//
+//	userAgent - User-Agent字符串，建议包含应用名称和版本
+//
+// 示例:
+//
+//	session := NewSessionBuilder().
+//	  WithUserAgent("MyApp/1.0 (https://example.com)").
+//	  Build()
+//
+//	// 移动设备模拟
+//	session := NewSessionBuilder().
+//	  WithUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)").
+//	  Build()
+//
+// 最佳实践:
+//   - 使用描述性的User-Agent，包含应用名称和版本
+//   - 遵守目标网站的robots.txt和使用条款
+//   - 避免伪装成浏览器进行恶意行为
 func WithUserAgent(userAgent string) SessionOption {
 	return func(s *Session) error {
 		if s.Header == nil {
@@ -116,7 +241,33 @@ func WithUserAgent(userAgent string) SessionOption {
 	}
 }
 
-// WithCookieJar 设置自定义CookieJar
+// WithCookieJar 设置自定义的Cookie管理器。
+//
+// Cookie jar负责在请求之间自动管理Cookie的存储和发送。
+// 默认情况下，Session使用内置的Cookie jar，但可以通过此选项自定义。
+//
+// 参数:
+//
+//	jar - 实现http.CookieJar接口的Cookie管理器
+//
+// 示例:
+//
+//	// 使用内存Cookie jar
+//	jar, _ := cookiejar.New(nil)
+//	session := NewSessionBuilder().
+//	  WithCookieJar(jar).
+//	  Build()
+//
+//	// 使用自定义Cookie jar（如持久化存储）
+//	customJar := &MyPersistentCookieJar{}
+//	session := NewSessionBuilder().
+//	  WithCookieJar(customJar).
+//	  Build()
+//
+// 用例:
+//   - 跨会话持久化Cookie
+//   - 多个Session之间共享Cookie
+//   - 实现自定义Cookie策略
 func WithCookieJar(jar http.CookieJar) SessionOption {
 	return func(s *Session) error {
 		s.cookiejar = jar
@@ -127,7 +278,27 @@ func WithCookieJar(jar http.CookieJar) SessionOption {
 	}
 }
 
-// WithDisableCookies 禁用Cookie
+// WithDisableCookies 完全禁用Cookie功能。
+//
+// 禁用Cookie后，Session将不会发送或接收任何Cookie。
+// 这对于某些无状态的API调用或有特殊安全要求的场景很有用。
+//
+// 示例:
+//
+//	// 创建不使用Cookie的Session
+//	session := NewSessionBuilder().
+//	  WithDisableCookies().
+//	  Build()
+//
+//	// 适用于RESTful API调用
+//	resp, err := session.Get("https://api.example.com/data").
+//	  SetBearerToken("your-token").
+//	  Execute()
+//
+// 注意:
+//   - 禁用Cookie后无法进行基于Session的身份验证
+//   - 某些网站可能需要Cookie才能正常工作
+//   - 可以与基于Token的认证方案配合使用
 func WithDisableCookies() SessionOption {
 	return func(s *Session) error {
 		s.cookiejar = nil
@@ -138,7 +309,34 @@ func WithDisableCookies() SessionOption {
 	}
 }
 
-// WithKeepAlives 设置是否保持连接
+// WithKeepAlives 设置是否启用HTTP Keep-Alive连接复用。
+//
+// Keep-Alive允许在同一个TCP连接上发送多个HTTP请求，
+// 这可以显著提高性能，特别是在需要向同一服务器发送多个请求时。
+//
+// 参数:
+//
+//	enabled - true启用Keep-Alive，false禁用
+//
+// 示例:
+//
+//	// 启用Keep-Alive（推荐用于生产环境）
+//	session := NewSessionBuilder().
+//	  WithKeepAlives(true).
+//	  Build()
+//
+//	// 禁用Keep-Alive（用于特殊场景）
+//	session := NewSessionBuilder().
+//	  WithKeepAlives(false).
+//	  Build()
+//
+// 性能影响:
+//   - 启用: 减少TCP握手开销，提高并发性能
+//   - 禁用: 每个请求都建立新连接，增加延迟但减少资源占用
+//
+// 建议:
+//   - 生产环境建议启用
+//   - 短生命周期应用或有连接限制时可考虑禁用
 func WithKeepAlives(enabled bool) SessionOption {
 	return func(s *Session) error {
 		if s.transport == nil {

@@ -89,6 +89,7 @@ func UploadFileFromPath(fileName string) (*UploadFile, error) {
 	ufile := NewUploadFile()
 	ufile.FileReader = fd
 	ufile.FileName = fileName
+	ufile.FieldName = "file" // 设置默认字段名
 	ufile.fileCloser = fd
 
 	return ufile, nil
@@ -108,6 +109,7 @@ func UploadFileFromGlob(glob string) ([]*UploadFile, error) {
 	}
 
 	var ufiles []*UploadFile
+	fileIndex := 0
 
 	for _, f := range files {
 		if s, err := os.Stat(f); err != nil || s.IsDir() {
@@ -123,7 +125,14 @@ func UploadFileFromGlob(glob string) ([]*UploadFile, error) {
 			ufile := NewUploadFile()
 			ufile.FileReader = fd
 			ufile.FileName = filepath.Base(fd.Name())
+			// 为每个文件生成唯一的字段名
+			if fileIndex == 0 {
+				ufile.FieldName = "file"
+			} else {
+				ufile.FieldName = fmt.Sprintf("file%d", fileIndex)
+			}
 			ufile.fileCloser = fd
+			fileIndex++
 
 			ufiles = append(ufiles, ufile)
 		}

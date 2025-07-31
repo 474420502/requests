@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	netproxy "golang.org/x/net/proxy"
@@ -19,15 +20,14 @@ type Config struct {
 
 // SetBasicAuth 设置基础认证（支持向后兼容的error返回）
 func (cfg *Config) SetBasicAuth(user, password string) error {
+	// 为了向后兼容，允许空字符串，但仍然设置认证
 	if cfg.ses.auth == nil {
 		cfg.ses.auth = &BasicAuth{}
 	}
 	cfg.ses.auth.User = user
 	cfg.ses.auth.Password = password
 	return nil
-}
-
-// SetBasicAuthString 设置基础认证（类型安全方法，不返回error）
+} // SetBasicAuthString 设置基础认证（类型安全方法，不返回error）
 func (cfg *Config) SetBasicAuthString(user, password string) {
 	if cfg.ses.auth == nil {
 		cfg.ses.auth = &BasicAuth{}
@@ -54,49 +54,6 @@ func (cfg *Config) ClearBasicAuth() {
 	cfg.ses.auth = nil
 }
 
-// SetBasicAuthLegacy 支持多种参数形式的遗留方法
-//
-// Deprecated: 此方法将在 v3.0.0 中移除。请使用以下替代方案：
-//   - SetBasicAuth(user, password string) error - 用于字符串参数
-//   - SetBasicAuthStruct(*BasicAuth) - 用于结构体参数
-//   - ClearBasicAuth() - 用于清除认证
-//
-// 迁移示例:
-//
-//	旧: cfg.SetBasicAuthLegacy("user", "pass")
-//	新: cfg.SetBasicAuth("user", "pass")
-//
-//	旧: cfg.SetBasicAuthLegacy(&BasicAuth{User: "user", Password: "pass"})
-//	新: cfg.SetBasicAuthStruct(&BasicAuth{User: "user", Password: "pass"})
-func (cfg *Config) SetBasicAuthLegacy(args ...interface{}) error {
-	if len(args) == 1 {
-		switch v := args[0].(type) {
-		case *BasicAuth:
-			cfg.SetBasicAuthStruct(v)
-			return nil
-		case BasicAuth:
-			cfg.SetBasicAuthStruct(&v)
-			return nil
-		case nil:
-			cfg.ClearBasicAuth()
-			return nil
-		default:
-			return fmt.Errorf("unsupported basic auth type: %T", v)
-		}
-	} else if len(args) == 2 {
-		user, ok := args[0].(string)
-		if !ok {
-			return fmt.Errorf("first argument must be string, got %T", args[0])
-		}
-		password, ok := args[1].(string)
-		if !ok {
-			return fmt.Errorf("second argument must be string, got %T", args[1])
-		}
-		return cfg.SetBasicAuth(user, password)
-	}
-	return fmt.Errorf("invalid number of arguments: %d", len(args))
-}
-
 // SetTLSConfig 设置TLS配置
 func (cfg *Config) SetTLSConfig(tlsconfig *tls.Config) {
 	cfg.ses.transport.TLSClientConfig = tlsconfig
@@ -107,42 +64,43 @@ func (cfg *Config) SetInsecure(is bool) {
 	cfg.ses.transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: is}
 }
 
-// SetProxy 设置代理（支持多种类型以保持向后兼容）
-//
-// Deprecated: 此方法将在 v3.0.0 中移除。请使用 SetProxyString(proxyURL string) 代替以获得更好的类型安全性。
-//
-// 迁移示例:
-//
-//	旧: cfg.SetProxy("http://proxy:8080")
-//	新: cfg.SetProxyString("http://proxy:8080")
-//
-//	旧: cfg.SetProxy(nil)
-//	新: cfg.ClearProxy()
-func (cfg *Config) SetProxy(proxy interface{}) error {
-	switch v := proxy.(type) {
-	case string:
-		return cfg.SetProxyString(v)
-	case *url.URL:
-		return cfg.setProxyURL(v)
-	case nil:
-		cfg.ClearProxy()
-		return nil
-	default:
-		return fmt.Errorf("unsupported proxy type: %T", v)
-	}
-}
-
 // SetProxyString 类型安全的代理设置方法（推荐使用）
 func (cfg *Config) SetProxyString(proxyURL string) error {
 	if proxyURL == "" {
 		cfg.ses.transport.Proxy = nil
 		return nil
 	}
+
 	purl, err := url.Parse(proxyURL)
 	if err != nil {
 		return fmt.Errorf("parse proxy URL: %w", err)
 	}
+
+	// 智能验证：检查URL是否看起来像合理的代理URL
+	// 如果没有scheme且看起来不像host:port格式，则认为是无效的
+	if purl.Scheme == "" && purl.Host == "" {
+		// 对于没有scheme的情况，检查是否至少看起来像host或host:port
+		if !isValidHostPort(proxyURL) {
+			return fmt.Errorf("invalid proxy URL format: %s", proxyURL)
+		}
+	}
+
 	return cfg.setProxyURL(purl)
+}
+
+// isValidHostPort 检查字符串是否看起来像host或host:port格式
+func isValidHostPort(s string) bool {
+	// 简单检查：应该包含至少一个点（域名）或者是localhost
+	// 且不应该包含空格或其他明显无效的字符
+	if strings.Contains(s, " ") || strings.Contains(s, "\t") || strings.Contains(s, "\n") {
+		return false
+	}
+
+	// 检查是否包含点（域名）或者是已知的本地主机名
+	return strings.Contains(s, ".") || strings.HasPrefix(s, "localhost") || strings.HasPrefix(s, "127.")
+} // SetProxy 设置代理（SetProxyString的别名，用于兼容性）
+func (cfg *Config) SetProxy(proxyURL string) error {
+	return cfg.SetProxyString(proxyURL)
 }
 
 // ClearProxy 清除代理设置
@@ -206,40 +164,14 @@ func (cfg *Config) SetContentEncoding(ct ContentEncodingType) {
 	cfg.ses.contentEncoding = ct
 }
 
-// SetTimeout 设置超时时间（支持多种类型以保持向后兼容）
-//
-// Deprecated: 此方法将在 v3.0.0 中移除。请使用以下类型安全的替代方案：
-//   - SetTimeoutDuration(time.Duration) - 推荐使用，最精确
-//   - SetTimeoutSeconds(int) - 用于简单的秒数设置
-//
-// 迁移示例:
-//
-//	旧: cfg.SetTimeout(30)
-//	新: cfg.SetTimeoutSeconds(30) 或 cfg.SetTimeoutDuration(30*time.Second)
-//
-//	旧: cfg.SetTimeout(time.Second * 30)
-//	新: cfg.SetTimeoutDuration(30*time.Second)
-func (cfg *Config) SetTimeout(t interface{}) error {
-	switch v := t.(type) {
-	case time.Duration:
-		cfg.SetTimeoutDuration(v)
-	case int:
-		cfg.SetTimeoutSeconds(v)
-	case int64:
-		cfg.SetTimeoutSeconds(int(v))
-	case float32:
-		cfg.ses.client.Timeout = time.Duration(v * float32(time.Second))
-	case float64:
-		cfg.ses.client.Timeout = time.Duration(v * float64(time.Second))
-	default:
-		return fmt.Errorf("unsupported timeout type: %T", v)
-	}
-	return nil
-}
-
 // SetTimeoutDuration 设置超时时间（推荐使用此方法）
 func (cfg *Config) SetTimeoutDuration(timeout time.Duration) {
 	cfg.ses.client.Timeout = timeout
+}
+
+// SetTimeout 设置超时时间（SetTimeoutDuration的别名，用于兼容性）
+func (cfg *Config) SetTimeout(timeout time.Duration) {
+	cfg.SetTimeoutDuration(timeout)
 }
 
 // SetTimeoutSeconds 设置超时时间（秒）

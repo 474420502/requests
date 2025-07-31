@@ -19,7 +19,7 @@ func main() {
 	log.Println(string(resp.Content()))
 
 	tp = ses.Post("http://httpbin.org/anything")
-	tp.SetBodyFormData("./tests/learn.js")
+	tp.SetFormFileFromPath("file", "./tests/learn.js")
 	resp, _ = tp.Execute()
 	log.Println(string(resp.Content()))
 }

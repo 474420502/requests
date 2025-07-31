@@ -68,15 +68,15 @@ func testModernAPI() {
 		fmt.Println("✓ 类型安全配置方法正常工作")
 	}
 
-	// 5. 验证弃用方法仍能工作但发出警告
-	fmt.Println("5. 测试向后兼容的弃用方法:")
+	// 5. 验证现代方法都正常工作
+	fmt.Println("5. 测试现代API方法:")
 
-	// 测试deprecated的SetBasicAuth with interface{}
-	err = session.Config().SetBasicAuthLegacy("testuser", "testpass")
+	// 测试现代的SetBasicAuth方法
+	err = session.Config().SetBasicAuth("testuser", "testpass")
 	if err != nil {
-		fmt.Printf("✗ 兼容性方法失败: %v\n", err)
+		fmt.Printf("✗ 现代方法失败: %v\n", err)
 	} else {
-		fmt.Println("✓ 弃用方法保持向后兼容")
+		fmt.Println("✓ 现代方法正常工作")
 	}
 
 	// 6. 验证现代化API的一致性
@@ -99,12 +99,12 @@ func testModernAPI() {
 	}
 
 	fmt.Println("\n=== 第一阶段重构总结 ===")
-	fmt.Println("✅ 彻底废弃了Temporary - 现在是Request的兼容层")
+	fmt.Println("✅ 完全移除了Temporary - 现在统一使用Request")
 	fmt.Println("✅ Session所有方法统一返回*Request对象")
 	fmt.Println("✅ 顶层函数统一使用Request模式")
-	fmt.Println("✅ config.go清理完成 - 推荐类型安全方法，兼容旧方法")
+	fmt.Println("✅ config.go清理完成 - 使用类型安全方法")
 	fmt.Println("✅ base.go简化 - 移除了不再使用的buildBodyRequest")
-	fmt.Println("✅ 保持向后兼容性，所有现有代码仍能正常工作")
+	fmt.Println("✅ API完全现代化，移除了所有deprecated方法")
 	fmt.Println("✅ 消除了API二元性问题 - 现在只有一个Request构建器")
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"strings"
@@ -119,20 +120,18 @@ func demonstrateFormUpload() {
 		fmt.Printf("✓ URL编码表单提交成功，状态码: %d\n", resp.GetStatusCode())
 	}
 
-	// 7. 复杂的multipart表单（传统方式兼容）
+	// 7. 复杂的multipart表单（现代方式）
 	fmt.Println("\n7. 复杂的multipart表单:")
 
-	// 创建multipart数据
-	multipartData := session.Post("https://httpbin.org/post").CreateBodyMultipart()
-	multipartData.AddField("user_name", "复杂表单用户")
-	multipartData.AddField("user_email", "complex@example.com")
-
-	// 添加文件
+	// 使用现代API设置表单字段和文件
 	fileBytes := []byte("复杂表单中的文件内容")
-	multipartData.AddFile("attachment", "complex.txt", fileBytes)
 
 	resp, err = session.Post("https://httpbin.org/post").
-		SetBodyFormData(multipartData).
+		SetFormFields(map[string]string{
+			"user_name":  "复杂表单用户",
+			"user_email": "complex@example.com",
+		}).
+		AddFormFile("attachment", "complex.txt", bytes.NewReader(fileBytes)).
 		Execute()
 
 	if err != nil {

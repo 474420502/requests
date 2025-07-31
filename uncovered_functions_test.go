@@ -168,58 +168,7 @@ func TestUncoveredMiddlewareFunctions(t *testing.T) {
 	})
 }
 
-// TestUncoveredMultipartFormDataFunctions 测试未覆盖的multipart form data功能
-func TestUncoveredMultipartFormDataFunctions(t *testing.T) {
-	t.Run("MultipartFormData_Operations", func(t *testing.T) {
-		// 通过Request创建MultipartFormData
-		session := NewSession()
-		req := session.Post("http://example.com")
-		mfd := req.CreateBodyMultipart()
-
-		// 测试Data方法
-		data := mfd.Data()
-		if data == nil {
-			t.Error("Expected data buffer, got nil")
-		}
-
-		// 测试Writer方法
-		writer := mfd.Writer()
-		if writer == nil {
-			t.Error("Expected writer, got nil")
-		}
-
-		// 测试AddField
-		err := mfd.AddField("test_field", "test_value")
-		if err != nil {
-			t.Errorf("AddField failed: %v", err)
-		}
-
-		// 测试AddFile (创建一个假文件)
-		fileContent := []byte("test file content")
-		err = mfd.AddFile("file_field", "test.txt", fileContent)
-		if err != nil {
-			t.Errorf("AddFile failed: %v", err)
-		}
-
-		// 测试AddFieldFile
-		err = mfd.AddFieldFile("file_field2", "test2.txt", bytes.NewReader(fileContent))
-		if err != nil {
-			t.Errorf("AddFieldFile failed: %v", err)
-		}
-
-		// 测试ContentType
-		contentType := mfd.ContentType()
-		if !strings.Contains(contentType, "multipart/form-data") {
-			t.Errorf("Expected multipart content type, got: %s", contentType)
-		}
-
-		// 测试Close
-		err = mfd.Close()
-		if err != nil {
-			t.Errorf("Close failed: %v", err)
-		}
-	})
-} // TestUncoveredRequestFunctions 测试未覆盖的request功能
+// TestUncoveredRequestFunctions 测试未覆盖的request功能
 func TestUncoveredRequestFunctions(t *testing.T) {
 	t.Run("Request_HeaderOperations", func(t *testing.T) {
 		session := NewSession()
@@ -566,23 +515,16 @@ func TestSpecialEdgeCases(t *testing.T) {
 		session := NewSession()
 		req := session.Post("http://httpbin.org/post")
 
-		// 创建multipart数据
-		multipartData := req.CreateBodyMultipart()
-		if multipartData == nil {
-			t.Error("Expected multipart data, got nil")
-		}
-
-		// 添加字段和文件
-		err := multipartData.AddField("text_field", "text_value")
-		if err != nil {
-			t.Errorf("AddField failed: %v", err)
-		}
-
-		// 尝试添加一个小文件
+		// 使用现代API创建表单数据
 		fileContent := []byte("small file content")
-		err = multipartData.AddFile("file_field", "small.txt", fileContent)
-		if err != nil {
-			t.Errorf("AddFile failed: %v", err)
+		req.SetFormFields(map[string]string{
+			"text_field": "text_value",
+		})
+		req.AddFormFile("file_field", "small.txt", bytes.NewReader(fileContent))
+
+		// 验证请求设置成功
+		if req.err != nil {
+			t.Errorf("Request setup failed: %v", req.err)
 		}
 	})
 }

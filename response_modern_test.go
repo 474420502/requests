@@ -3,6 +3,7 @@ package requests
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 // 测试新的BindJSON功能
@@ -222,11 +223,11 @@ func TestErrorHandling_Robustness(t *testing.T) {
 	}
 
 	// 测试无效代理配置 (使用明显无效的格式)
-	err = session.Config().SetProxy("://invalid-proxy-url")
+	err = session.Config().SetProxyString("://invalid-proxy-url")
 	if err == nil {
 		t.Error("Expected error for completely invalid proxy format, but got none")
 	} else {
-		t.Logf("SetProxy correctly returned error for invalid format: %v", err)
+		t.Logf("SetProxyString correctly returned error for invalid format: %v", err)
 	}
 
 	// 测试类型安全的代理设置
@@ -255,14 +256,14 @@ func TestBackwardCompatibility(t *testing.T) {
 		t.Fatalf("Backward compatible SetBasicAuth failed: %v", err)
 	}
 
-	// 测试旧的SetProxy接口仍然工作
-	err = session.Config().SetProxy("http://proxy.example.com:8080")
+	// 测试现代的SetProxyString接口
+	err = session.Config().SetProxyString("http://proxy.example.com:8080")
 	if err != nil {
-		t.Fatalf("Backward compatible SetProxy failed: %v", err)
+		t.Fatalf("SetProxyString failed: %v", err)
 	}
 
-	// 测试旧的SetTimeout接口仍然工作
-	err = session.Config().SetTimeout(30)
+	// 测试现代的SetTimeoutDuration接口
+	session.Config().SetTimeoutDuration(30 * time.Second)
 	if err != nil {
 		t.Fatalf("Backward compatible SetTimeout failed: %v", err)
 	}

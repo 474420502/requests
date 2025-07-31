@@ -31,21 +31,6 @@ func TestConfigMethods(t *testing.T) {
 		}
 	})
 
-	t.Run("SetBasicAuthLegacy", func(t *testing.T) {
-		session := NewSession()
-		config := session.Config()
-		err := config.SetBasicAuthLegacy("user", "pass")
-		if err != nil {
-			t.Errorf("SetBasicAuthLegacy should not return error: %v", err)
-		}
-		if session.auth == nil {
-			t.Fatal("Basic auth should be set")
-		}
-		if session.auth.User != "user" || session.auth.Password != "pass" {
-			t.Error("Basic auth credentials not set correctly")
-		}
-	})
-
 	t.Run("SetTLSConfig", func(t *testing.T) {
 		session := NewSession()
 		config := session.Config()
@@ -94,31 +79,38 @@ func TestConfigMethods(t *testing.T) {
 	})
 }
 
-// TestSetProxy 测试SetProxy方法的各种情况
-func TestSetProxy(t *testing.T) {
-	t.Run("ValidURL", func(t *testing.T) {
+// TestSetProxyString 测试SetProxyString方法的各种情况
+func TestSetProxyString(t *testing.T) {
+	t.Run("ValidHTTPURL", func(t *testing.T) {
 		session := NewSession()
 		config := session.Config()
-		parsedURL, _ := url.Parse("http://127.0.0.1:8080")
-		config.SetProxy(parsedURL)
+		err := config.SetProxyString("http://127.0.0.1:8080")
+		if err != nil {
+			t.Errorf("SetProxyString should not return error: %v", err)
+		}
 
 		if session.transport.Proxy == nil {
 			t.Error("Proxy should be set")
 		}
 	})
 
-	t.Run("NilURL", func(t *testing.T) {
+	t.Run("ClearProxy", func(t *testing.T) {
 		session := NewSession()
 		config := session.Config()
-		config.SetProxy(nil)
-		// 应该不会崩溃，但可能不会设置代理
+		config.ClearProxy()
+		// 应该不会崩溃，代理被清除
+		if session.transport.Proxy != nil {
+			t.Error("Proxy should be cleared")
+		}
 	})
 
 	t.Run("HTTPSProxy", func(t *testing.T) {
 		session := NewSession()
 		config := session.Config()
-		parsedURL, _ := url.Parse("https://proxy.example.com:8080")
-		config.SetProxy(parsedURL)
+		err := config.SetProxyString("https://proxy.example.com:8080")
+		if err != nil {
+			t.Errorf("SetProxyString should not return error: %v", err)
+		}
 
 		if session.transport.Proxy == nil {
 			t.Error("HTTPS proxy should be set")
@@ -128,8 +120,10 @@ func TestSetProxy(t *testing.T) {
 	t.Run("SOCKS5Proxy", func(t *testing.T) {
 		session := NewSession()
 		config := session.Config()
-		parsedURL, _ := url.Parse("socks5://127.0.0.1:1080")
-		config.SetProxy(parsedURL)
+		err := config.SetProxyString("socks5://127.0.0.1:1080")
+		if err != nil {
+			t.Errorf("SetProxyString should not return error: %v", err)
+		}
 
 		if session.transport.Proxy == nil {
 			t.Error("SOCKS5 proxy should be set")

@@ -18,6 +18,36 @@ import (
 	"time"
 )
 
+// MultipartFormData multipart/form-data构建器
+type MultipartFormData struct {
+	writer *multipart.Writer
+	buffer *bytes.Buffer
+}
+
+// AddField 添加表单字段
+func (mpfd *MultipartFormData) AddField(name, value string) error {
+	return mpfd.writer.WriteField(name, value)
+}
+
+// AddFile 添加文件字段
+func (mpfd *MultipartFormData) AddFile(fieldName, fileName string, reader io.Reader) error {
+	part, err := mpfd.writer.CreateFormFile(fieldName, fileName)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(part, reader)
+	return err
+}
+
+// Close 关闭writer并返回数据
+func (mpfd *MultipartFormData) Close() (*bytes.Buffer, string, error) {
+	err := mpfd.writer.Close()
+	if err != nil {
+		return nil, "", err
+	}
+	return mpfd.buffer, mpfd.writer.FormDataContentType(), nil
+}
+
 // Request 替代 Temporary，更符合直觉的命名
 // 这是一个请求构建器，支持链式调用和健壮的错误处理
 type Request struct {
@@ -38,16 +68,20 @@ type Request struct {
 
 	// 中间件支持
 	middlewares []Middleware
+
+	// 表单文件存储
+	formFiles []FormFile
 }
 
 // NewRequest 创建一个新的请求构建器
 func NewRequest(session *Session, method, urlStr string) *Request {
 	req := &Request{
-		session: session,
-		method:  method,
-		header:  make(http.Header),
-		cookies: make(map[string]*http.Cookie),
-		ctx:     session.GetDefaultContext(), // 使用Session的默认上下文
+		session:   session,
+		method:    method,
+		header:    make(http.Header),
+		cookies:   make(map[string]*http.Cookie),
+		ctx:       session.GetDefaultContext(), // 使用Session的默认上下文
+		formFiles: make([]FormFile, 0),         // 初始化表单文件列表
 		// 继承Session的中间件
 		middlewares: append([]Middleware{}, session.middlewares...),
 	}
@@ -243,13 +277,6 @@ func (r *Request) SetBodyWithType(contentType string, params interface{}) *Reque
 		r.err = fmt.Errorf("SetBodyWithType only supports string, []byte, []rune, got %T", params)
 		return r
 	}
-}
-
-// CreateBodyMultipart 创建multipart表单数据 (兼容性方法)
-func (r *Request) CreateBodyMultipart() *MultipartFormData {
-	mpfd := &MultipartFormData{}
-	mpfd.writer = multipart.NewWriter(&mpfd.data)
-	return mpfd
 }
 
 // SetQuery 设置查询参数
@@ -464,10 +491,10 @@ func (r *Request) SetURLPath(path []string) *Request {
 	return r
 }
 
-// 以下查询参数和路径参数方法已被移除。
+// 查询参数和路径参数的deprecated方法已被完全移除。
 // 请使用现代化的类型安全方法：
-// - AddQueryInt, AddQueryBool, AddQueryFloat, AddQuery 等用于查询参数
-// - SetPathParam, SetPathParams 用于路径参数
+// - AddQuery, AddQueryInt, AddQueryBool, AddQueryFloat 等用于查询参数
+// - SetPathParam, SetPathParams 用于路径参数替换
 
 // WithMiddleware 添加中间件
 func (r *Request) WithMiddleware(middleware ...Middleware) *Request {
@@ -701,6 +728,52 @@ func (r *Request) SetFormFields(fields map[string]string) *Request {
 	return r.SetBodyFormFiles(files...)
 }
 
+// SetBodyFormData 设置表单数据（SetFormFields的别名，用于兼容性）
+func (r *Request) SetBodyFormData(data interface{}) *Request {
+	switch v := data.(type) {
+	case map[string]string:
+		return r.SetFormFields(v)
+	case url.Values:
+		fields := make(map[string]string)
+		for key, values := range v {
+			if len(values) > 0 {
+				fields[key] = values[0]
+			}
+		}
+		return r.SetFormFields(fields)
+	case string:
+		// 对于字符串，根据是否包含路径分隔符判断是文件路径还是普通字段
+		if strings.Contains(v, "/") || strings.Contains(v, "\\") || strings.Contains(v, "*") {
+			// 看起来是文件路径，作为文件处理
+			fields := map[string]string{"file0": v}
+			return r.SetFormFields(fields)
+		} else {
+			// 普通字符串，作为字段值处理
+			fields := map[string]string{"data": v}
+			return r.SetFormFields(fields)
+		}
+	default:
+		// 对于其他类型，尝试转换为字符串作为单个字段
+		fields := map[string]string{"data": fmt.Sprintf("%v", v)}
+		return r.SetFormFields(fields)
+	}
+}
+
+// CreateBodyMultipart 创建multipart/form-data构建器
+func (r *Request) CreateBodyMultipart() *MultipartFormData {
+	if r.err != nil {
+		return nil
+	}
+
+	buffer := &bytes.Buffer{}
+	writer := multipart.NewWriter(buffer)
+
+	return &MultipartFormData{
+		writer: writer,
+		buffer: buffer,
+	}
+}
+
 // AddFormFile 添加表单文件
 func (r *Request) AddFormFile(fieldName, fileName string, reader io.Reader) *Request {
 	if r.err != nil {
@@ -713,7 +786,9 @@ func (r *Request) AddFormFile(fieldName, fileName string, reader io.Reader) *Req
 		Reader:    reader,
 	}
 
-	return r.SetBodyFormFiles(file)
+	// 将文件添加到列表中，而不是立即构建 multipart body
+	r.formFiles = append(r.formFiles, file)
+	return r
 }
 
 // AddFormField 添加单个表单字段
@@ -728,7 +803,9 @@ func (r *Request) AddFormField(name, value string) *Request {
 		Reader:    strings.NewReader(value),
 	}
 
-	return r.SetBodyFormFiles(file)
+	// 将字段添加到列表中，而不是立即构建 multipart body
+	r.formFiles = append(r.formFiles, file)
+	return r
 }
 
 // AddFormFieldInt 添加整数表单字段
@@ -822,114 +899,17 @@ func (r *Request) AddMultipleFormFiles(files map[string]io.Reader) *Request {
 	return r.SetBodyFormFiles(formFiles...)
 }
 
-// SetBodyFormData 设置多部分表单数据（兼容Temporary，但简化实现）
-// Deprecated: 使用 SetFormFields() 和 AddFormFile() 方法代替，它们提供更好的类型安全性
-func (r *Request) SetBodyFormData(params ...interface{}) *Request {
-	if r.err != nil {
-		return r
-	}
-
-	// 检查是否是 MultipartFormData 类型
-	if len(params) == 1 {
-		if w, ok := params[0].(*MultipartFormData); ok {
-			err := w.writer.Close()
-			if err != nil {
-				r.err = fmt.Errorf("failed to close multipart writer: %w", err)
-				return r
-			}
-
-			r.SetHeader("Content-Type", w.writer.FormDataContentType())
-			return r.SetBodyReader(w.Data())
-		}
-	}
-
-	// 简化实现：转换为FormFile切片
-	var files []FormFile
-	var hasData bool
-
-	for i, param := range params {
-		switch v := param.(type) {
-		case *UploadFile:
-			// 支持 UploadFile 指针类型
-			fieldName := v.FieldName
-			if fieldName == "" {
-				fieldName = fmt.Sprintf("file%d", i)
-			}
-			files = append(files, FormFile{
-				FieldName: fieldName,
-				FileName:  v.FileName,
-				Reader:    v.FileReader,
-			})
-			hasData = true
-		case UploadFile:
-			// 支持 UploadFile 值类型
-			fieldName := v.FieldName
-			if fieldName == "" {
-				fieldName = fmt.Sprintf("file%d", i)
-			}
-			files = append(files, FormFile{
-				FieldName: fieldName,
-				FileName:  v.FileName,
-				Reader:    v.FileReader,
-			})
-			hasData = true
-		case map[string]string:
-			// 将键值对转换为表单字段
-			for key, value := range v {
-				files = append(files, FormFile{
-					FieldName: key,
-					FileName:  "", // 空文件名表示这是一个表单字段
-					Reader:    strings.NewReader(value),
-				})
-			}
-			hasData = true
-		case string:
-			// 假设是文件路径或文件内容
-			files = append(files, FormFile{
-				FieldName: fmt.Sprintf("file%d", i),
-				FileName:  "file.txt",
-				Reader:    strings.NewReader(v),
-			})
-			hasData = true
-		default:
-			r.err = fmt.Errorf("SetBodyFormData unsupported parameter type: %T", v)
-			return r
-		}
-	}
-
-	if !hasData {
-		r.err = fmt.Errorf("SetBodyFormData requires at least one parameter")
-		return r
-	}
-
-	return r.SetBodyFormFiles(files...)
-}
-
 // SetBodyFormFiles 设置多部分表单（文件上传）
 func (r *Request) SetBodyFormFiles(files ...FormFile) *Request {
 	if r.err != nil {
 		return r
 	}
 
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
+	// 清空现有的表单文件，并添加新的文件
+	r.formFiles = make([]FormFile, 0, len(files))
+	r.formFiles = append(r.formFiles, files...)
 
-	for _, file := range files {
-		err := r.writeFormFile(writer, file)
-		if err != nil {
-			r.err = fmt.Errorf("failed to write form file: %w", err)
-			return r
-		}
-	}
-
-	err := writer.Close()
-	if err != nil {
-		r.err = fmt.Errorf("failed to close multipart writer: %w", err)
-		return r
-	}
-
-	r.body = body
-	return r.SetHeader("Content-Type", "multipart/form-data; boundary="+writer.Boundary())
+	return r
 }
 
 // FormFile 表示一个表单文件
@@ -941,7 +921,16 @@ type FormFile struct {
 
 // writeFormFile 写入表单文件
 func (r *Request) writeFormFile(writer *multipart.Writer, file FormFile) error {
-	part, err := writer.CreateFormFile(file.FieldName, file.FileName)
+	var part io.Writer
+	var err error
+
+	// 如果文件名为空，说明这是一个表单字段而不是文件
+	if file.FileName == "" {
+		part, err = writer.CreateFormField(file.FieldName)
+	} else {
+		part, err = writer.CreateFormFile(file.FieldName, file.FileName)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -1003,7 +992,28 @@ func (r *Request) Execute() (*Response, error) {
 // buildHTTPRequest 构建标准库的HTTP请求
 func (r *Request) buildHTTPRequest() (*http.Request, error) {
 	var bodyReader io.Reader
-	if r.body != nil {
+
+	// 如果有表单文件，构建 multipart body
+	if len(r.formFiles) > 0 {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+
+		for _, file := range r.formFiles {
+			err := r.writeFormFile(writer, file)
+			if err != nil {
+				return nil, fmt.Errorf("failed to write form file: %w", err)
+			}
+		}
+
+		err := writer.Close()
+		if err != nil {
+			return nil, fmt.Errorf("failed to close multipart writer: %w", err)
+		}
+
+		bodyReader = body
+		// 设置 Content-Type 头部
+		r.header.Set("Content-Type", "multipart/form-data; boundary="+writer.Boundary())
+	} else if r.body != nil {
 		bodyReader = r.body
 	}
 

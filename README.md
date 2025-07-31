@@ -325,25 +325,25 @@ resp, err := session.Get("https://api.example.com/slow").
 Go Requests supports dynamic URL parameter modification, especially useful for web scraping and API traversal:
 
 ```go
-// Dynamic URL query parameter modification
+// Type-safe query parameter methods
 session := requests.NewSession()
-req := session.Get("http://api.example.com/search?page=1&category=tech")
+resp, _ := session.Get("http://api.example.com/search").
+    AddQuery("page", "1").
+    AddQuery("category", "tech").
+    Execute()
 
-// Get and modify page parameter
-pageParam := req.QueryParam("page")
-pageParam.IntAdd(1) // page becomes 2
-resp, _ := req.Execute()
+// Type-safe parameter methods
+resp, _ = session.Get("http://api.example.com/search").
+    AddQueryInt("page", 2).
+    AddQueryBool("active", true).
+    AddQueryFloat("score", 95.5).
+    Execute()
 
-// String setting
-pageParam.StringSet("5") // page becomes 5
-resp, _ = req.Execute()
-
-// Regex path parameter modification
-url := "http://api.example.com/articles/page-1-20/item-100"
-req = session.Get(url)
-pathParam := req.PathParam(`page-(\d+)-(\d+)`)
-pathParam.IntAdd(1) // becomes page-2-20
-resp, _ = req.Execute()
+// Path parameter replacement
+resp, _ = session.Get("http://api.example.com/users/{userId}/posts/{postId}").
+    SetPathParam("userId", "123").
+    SetPathParam("postId", "456").
+    Execute()
 ```
 
 ### 11. Middleware System
@@ -661,21 +661,23 @@ err := session.Config().SetProxyString("http://proxy.example.com:8080")
 
 ## 🔄 Version 2.0 Migration
 
-### Deprecated APIs (Still Functional)
+### Migration to Modern APIs
 
-While the following APIs still work in v2.0, they are deprecated and will be removed in v3.0:
+All deprecated APIs have been removed in v2.0. Use the following modern approaches:
 
 ```go
-// ❌ Deprecated - Complex parameter system
-req.QueryParam("page").IntSet(1)
-req.PathParam("userId").StringSet("123")
-
-// ✅ Modern - Type-safe methods
+// ✅ Modern - Type-safe query parameter methods
+req.AddQuery("query", "value")
 req.AddQueryInt("page", 1)
-req.SetPathParam("userId", "123")
+req.AddQueryBool("active", true)
+req.AddQueryFloat("score", 95.5)
 
-// ❌ Deprecated - Temporary API
-temp := requests.NewTemporary(session, "http://example.com")
+// ✅ Modern - Simple path parameter replacement
+req.SetPathParam("userId", "123")
+req.SetPathParams(map[string]string{
+    "userId": "123",
+    "postId": "456",
+})
 
 // ✅ Modern - Unified Request API
 req := session.Get("http://example.com")

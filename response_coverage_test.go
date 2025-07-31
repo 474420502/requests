@@ -259,40 +259,6 @@ func TestResponse_JSONMethods(t *testing.T) {
 			t.Errorf("Expected score 98.5, got %f", data.Score)
 		}
 	})
-
-	t.Run("MustBindJSON", func(t *testing.T) {
-		resp, err := session.Get(jsonServer.URL).Execute()
-		if err != nil {
-			t.Fatalf("Request failed: %v", err)
-		}
-
-		var data map[string]interface{}
-
-		// 这应该不会panic
-		resp.MustBindJSON(&data)
-
-		if data["name"] != "test" {
-			t.Errorf("Expected name 'test', got %v", data["name"])
-		}
-	})
-
-	t.Run("MustBindJSON_Panic", func(t *testing.T) {
-		resp, err := session.Get(textServer.URL).Execute()
-		if err != nil {
-			t.Fatalf("Request failed: %v", err)
-		}
-
-		var data map[string]interface{}
-
-		// 这应该panic，因为不是有效的JSON
-		defer func() {
-			if r := recover(); r == nil {
-				t.Error("Expected MustBindJSON to panic on invalid JSON")
-			}
-		}()
-
-		resp.MustBindJSON(&data)
-	})
 }
 
 // TestResponse_StatusMethods 测试Response的状态相关方法

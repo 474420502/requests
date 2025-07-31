@@ -274,28 +274,29 @@ resp, err := session.Get("https://api.example.com/slow").
 
 ### 10. 动态参数处理
 
-Go Requests 支持动态修改URL参数，特别适用于爬虫和API遍历：
+Go Requests 支持类型安全的参数处理，特别适用于爬虫和API遍历：
 
 ```go
-// URL查询参数动态修改
+// 类型安全的查询参数方法
 session := requests.NewSession()
-req := session.Get("http://api.example.com/search?page=1&category=tech")
+resp, _ := session.Get("http://api.example.com/search").
+    AddQuery("页码", "1").
+    AddQuery("分类", "技术").
+    Execute()
 
-// 获取并修改page参数
-pageParam := req.QueryParam("page")
-pageParam.IntAdd(1) // page变为2
-resp, _ := req.Execute()
+// 类型安全的参数方法
+resp, _ = session.Get("http://api.example.com/search").
+    AddQueryInt("page", 2).
+    AddQueryBool("active", true).
+    AddQueryFloat("score", 95.5).
+    Execute()
 
-// 字符串方式设置
-pageParam.StringSet("5") // page变为5
-resp, _ = req.Execute()
-
-// 正则表达式路径参数修改
-url := "http://api.example.com/articles/page-1-20/item-100"
-req = session.Get(url)
-pathParam := req.PathParam(`page-(\d+)-(\d+)`)
-pathParam.IntAdd(1) // 变为page-2-20
-resp, _ = req.Execute()
+// 路径参数替换
+resp, _ = session.Get("http://api.example.com/users/{userId}/posts/{postId}").
+    SetPathParam("userId", "123").
+    SetPathParam("postId", "456").
+    Execute()
+```
 ```
 
 ### 11. 中间件系统

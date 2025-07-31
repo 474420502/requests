@@ -390,21 +390,4 @@ func TestRequestBodyMethods(t *testing.T) {
 			t.Errorf("Content-Type not set correctly: expected %s, got %s", contentType, req.header.Get("Content-Type"))
 		}
 	})
-
-	t.Run("CreateBodyMultipart", func(t *testing.T) {
-		req := Post("https://httpbin.org/post")
-		multipart := req.CreateBodyMultipart()
-
-		if multipart == nil {
-			t.Error("CreateBodyMultipart should return a MultipartFormData object")
-		}
-
-		// 检查multipart对象是否有writer
-		if multipart.Writer() == nil {
-			t.Error("MultipartFormData should have a writer")
-		}
-
-		// 注意：CreateBodyMultipart不会自动设置Content-Type
-		// 需要在实际使用时通过其他方法设置
-	})
 }

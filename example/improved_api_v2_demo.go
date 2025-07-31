@@ -24,7 +24,7 @@ func demonstrateImprovedAPIv2() {
 
 	// 新的类型安全配置方法
 	session.Config().SetBasicAuth("username", "password")
-	err = session.Config().SetProxy("http://proxy.example.com:8080")
+	err = session.Config().SetProxyString("http://proxy.example.com:8080")
 	if err != nil {
 		fmt.Printf("设置代理失败: %v\n", err)
 	} else {
@@ -149,7 +149,7 @@ func demonstrateImprovedAPIv2() {
 	}
 
 	// 无效代理配置的处理
-	err = session.Config().SetProxy("invalid-proxy-url")
+	err = session.Config().SetProxyString("invalid-proxy-url")
 	if err != nil {
 		fmt.Printf("✓ 正确捕获代理配置错误: %v\n", err)
 	}
@@ -269,17 +269,17 @@ func demonstratePhase2Improvements() {
 	}
 
 	// 4. 演示废弃旧API，推荐新API
-	fmt.Println("\n4. API现代化（旧API已标记为Deprecated）:")
+	fmt.Println("\n4. API现代化（已完全移除旧API）:")
 
 	req := session.Get("https://httpbin.org/get")
 
-	// 新的推荐方式（类型安全）
+	// 现代化的类型安全方式
 	req.AddQueryInt("page", 1).
 		AddQueryBool("debug", false).
 		AddQueryFloat("version", 2.1)
 
-	fmt.Println("✓ 推荐使用类型安全的AddQueryInt/Bool/Float方法")
-	fmt.Println("✗ 不再推荐使用req.QueryParam(\"key\").IntSet(value)的复杂方式")
+	fmt.Println("✓ 使用类型安全的AddQueryInt/Bool/Float方法")
+	fmt.Println("✓ 已完全移除req.QueryParam(\"key\").IntSet(value)的复杂方式")
 
 	resp, err = req.Execute()
 	if err != nil {
@@ -289,7 +289,7 @@ func demonstratePhase2Improvements() {
 	}
 
 	fmt.Println("\n=== 第二阶段改进总结 ===")
-	fmt.Println("✓ 废弃了复杂的IParam接口系统")
+	fmt.Println("✓ 完全移除了复杂的IParam接口系统")
 	fmt.Println("✓ 提供了类型安全的AddQuery*系列方法")
 	fmt.Println("✓ 提供了类型安全的AddFormField*系列方法")
 	fmt.Println("✓ 增强了JSON处理：IsJSON, GetJSONString/Int/Bool/Float等方法")
